@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request
 import requests
+import os
 
 app = Flask(__name__)
 
 # Replace this with your actual ngrok public URL
-NGROK_BACKEND_URL = 'https://xyz123.ngrok.io/upload'
+NGROK_BACKEND_URL = os.environ.get('NGROK_BACKEND_URL')
 
 
 @app.route('/', methods=['GET'])
