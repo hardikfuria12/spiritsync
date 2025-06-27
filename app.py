@@ -22,7 +22,7 @@ def submit():
             'file': (file.filename, file.stream, file.mimetype)
         }
         try:
-            response = requests.post(NGROK_BACKEND_URL, files=files)
+            response = requests.post(f"{NGROK_BACKEND_URL}/submit", files=files)
             return f"File forwarded to backend. Response: {response.text}"
         except requests.exceptions.RequestException as e:
             return f"Failed to reach backend: {e}", 500
