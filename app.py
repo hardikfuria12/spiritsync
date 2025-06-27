@@ -1,45 +1,35 @@
-from flask import Flask, render_template, request, redirect, url_for
-import os
+from flask import Flask, render_template, request
+import requests
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)\
+# Replace this with your actual ngrok public URL
+NGROK_BACKEND_URL = 'https://xyz123.ngrok.io/upload'
 
 
-@app.route('/upload',methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        file = request.files['file']
-        if file:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            return f"File uploaded successfully: {file.filename}"
+@app.route('/', methods=['GET'])
+def upload_form():
     return render_template('upload.html')
-@app.route('/')
-def index():
-    return render_template('index.html')
+
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    image = request.files['photo']
-    image.save('static/temp.jpg')
+    file = request.files.get('file')
+    if file:
+        # Directly forward the file to the backend server without saving locally
+        files = {
+            'file': (file.filename, file.stream, file.mimetype)
+        }
+        try:
+            response = requests.post(NGROK_BACKEND_URL, files=files)
+            return f"File forwarded to backend. Response: {response.text}"
+        except requests.exceptions.RequestException as e:
+            return f"Failed to reach backend: {e}", 500
 
-    # Stub for OCR result
-    extracted_data = {
-        'distributor': 'Stub Distilleries',
-        'invoice_number': 'INV1234',
-        'brand': 'Royal Stag',
-        'qty': '12',
-        'rate': '180'
-    }
-
-    return render_template('review.html', data=extracted_data)
-
-
+    return "No file received", 400
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # fallback for local dev
+    import os
+    port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
