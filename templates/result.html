@@ -1,0 +1,45 @@
+<!-- templates/result.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Preview & Status</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 2rem;
+    }
+    #status {
+      margin: 1rem 0;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>📊 Sales File Preview</h2>
+  <div id="table-container">
+    {{ table_html | safe }}
+  </div>
+
+  <div id="status">Checking login status...</div>
+
+  <script>
+    const userId = "{{ user_id }}";
+    async function pollStatus() {
+      const res = await fetch(`{{ NGROK_BACKEND_URL }}/status/${userId}`);
+      const data = await res.json();
+
+      if (data.status === 'login_failed') {
+        document.getElementById("status").innerText = "❌ Login failed. Please try again.";
+        setTimeout(() => window.location.href = "/", 3000);
+      } else if (data.status === 'scraping_done') {
+        document.getElementById("status").innerText = "✅ Login successful! Scraping done.";
+        setTimeout(() => window.location.href = `/review?user_id=${userId}`, 2000);
+      } else {
+        setTimeout(pollStatus, 3000);
+      }
+    }
+    pollStatus();
+  </script>
+</body>
+</html>
