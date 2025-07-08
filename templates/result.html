@@ -32,6 +32,7 @@
 
     async function pollStatus() {
         try {
+        console.log("🔗 Polling from: ", `${backendUrl}/status/${userId}`);
         const res = await fetch(`${backendUrl}/status/${userId}`);
         const text = await res.text();
         console.log("🔍 Raw response:", text);

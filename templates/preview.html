@@ -1,0 +1,69 @@
+<!-- templates/preview.html (served from Render) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview Uploaded Sales File</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f7f9fb;
+    }
+    h1 {
+      text-align: center;
+    }
+    .status {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+    th {
+      background: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 Preview of Your Sales File</h1>
+
+  <div class="status" id="status-text">🔄 Logging into FLR website...</div>
+
+  <div id="preview-table">
+    {{ table_html | safe }}
+  </div>
+
+  <script>
+    const userId = "{{ user_id }}";  // passed from Flask
+    async function checkStatus() {
+      const res = await fetch(`/check_status/${userId}`);
+      const data = await res.json();
+      const statusText = document.getElementById('status-text');
+
+      if (data.status === 'login_failed') {
+        alert("❌ Login was unsuccessful. Please try again later.");
+        window.location.href = "/";  // redirect to upload page
+      } else if (data.status === 'logging_in') {
+        statusText.innerText = "🔄 Logging into FLR website...";
+      } else if (data.status === 'scraping_started') {
+        statusText.innerText = "📡 Login successful. Now scraping FLR data...";
+      } else if (data.status === 'scraping_done') {
+        window.location.href = "/review";  // or wherever you show the result
+      }
+    }
+
+    setInterval(checkStatus, 3000);  // poll every 3s
+  </script>
+</body>
+</html>
