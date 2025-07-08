@@ -33,7 +33,10 @@
     async function pollStatus() {
         try {
         const res = await fetch(`${backendUrl}/status/${userId}`);
-        const data = await res.json();
+        const text = await res.text();
+        console.log("🔍 Raw response:", text);
+
+        const data = JSON.parse(text); // This line causes your error
         console.log("📡 Status response:", data);
 
         if (data.status === 'login_failed') {

@@ -43,7 +43,12 @@ def submit():
             return f"Backend error: {response.text}", 500
 
         data = response.json()
-        return render_template("result.html", user_id=data['user_id'], table_html=data['table_html'], NGROK_BACKEND_URL=NGROK_BACKEND_URL)
+        return render_template(
+            "result.html",
+            user_id=data['user_id'],
+            table_html=data['table_html'],
+            NGROK_BACKEND_URL=NGROK_BACKEND_URL
+        )
 
 
     except requests.exceptions.RequestException as e:
