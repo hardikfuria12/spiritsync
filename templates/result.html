@@ -17,29 +17,44 @@
 </head>
 <body>
   <h2>📊 Sales File Preview</h2>
+  <div id="status">Checking login status...</div>
   <div id="table-container">
     {{ table_html | safe }}
   </div>
 
-  <div id="status">Checking login status...</div>
 
   <script>
     const userId = "{{ user_id }}";
-    async function pollStatus() {
-      const res = await fetch(`{{ NGROK_BACKEND_URL }}/status/${userId}`);
-      const data = await res.json();
+    const backendUrl = "{{ NGROK_BACKEND_URL }}";
 
-      if (data.status === 'login_failed') {
-        document.getElementById("status").innerText = "❌ Login failed. Please try again.";
-        setTimeout(() => window.location.href = "/", 3000);
-      } else if (data.status === 'scraping_done') {
-        document.getElementById("status").innerText = "✅ Login successful! Scraping done.";
-        setTimeout(() => window.location.href = `/review?user_id=${userId}`, 2000);
-      } else {
-        setTimeout(pollStatus, 3000);
-      }
+    console.log("👀 Polling for userId =", userId);
+    console.log("🔗 Backend URL =", backendUrl);
+
+    async function pollStatus() {
+        try {
+        const res = await fetch(`${backendUrl}/status/${userId}`);
+        const data = await res.json();
+        console.log("📡 Status response:", data);
+
+        if (data.status === 'login_failed') {
+            document.getElementById("status").innerText = "❌ Login failed. Please try again.";
+            setTimeout(() => window.location.href = "/", 3000);
+        } else if (data.status === 'scraping_done') {
+            document.getElementById("status").innerText = "✅ Login successful! Scraping done.";
+            setTimeout(() => {
+            window.location.href = `/review?user_id=${userId}`;
+            }, 2000);
+        } else {
+            setTimeout(pollStatus, 3000);
+        }
+        } catch (err) {
+        console.error("❌ Polling error:", err);
+        setTimeout(pollStatus, 5000);
+        }
     }
+
     pollStatus();
-  </script>
+</script>
+
 </body>
 </html>
