@@ -15,6 +15,15 @@
     .btn-download {
       margin-top: 1rem;
     }
+    td input {
+      width: 100%;
+      border: none;
+      background-color: transparent;
+    }
+    td input:focus {
+      outline: none;
+      background-color: #f0f8ff;
+    }
   </style>
 </head>
 <body>
@@ -31,9 +40,17 @@
   {% if sales_dirty_html %}
   <div>
     <h2 class="text-danger">⚠️ Dirty Sales Data</h2>
-    <div id="dirty-table">{{ sales_dirty_html | safe }}</div>
+    <div id="dirty-table-wrapper">
+      <table id="dirty-table" class="table table-bordered table-danger">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales.xlsx')">
       ⬇️ Download Dirty File
+    </button>
+    <button class="btn btn-warning btn-download" onclick="moveSelectedRowsToCleanTable()">
+      ✨ Make Changes
     </button>
   </div>
   {% endif %}
@@ -43,6 +60,66 @@
       const table = document.getElementById(tableId);
       const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
       XLSX.writeFile(workbook, filename);
+    }
+
+    // Turn dirty HTML into editable table with checkboxes
+    window.onload = function () {
+      const dirtyWrapper = document.getElementById("dirty-table-wrapper");
+      if (!dirtyWrapper) return;
+      const parser = new DOMParser();
+      const tempDoc = parser.parseFromString(`{{ sales_dirty_html | safe }}`, 'text/html');
+      const table = tempDoc.querySelector("table");
+
+      const head = table.querySelector("thead");
+      const body = table.querySelector("tbody");
+      const dirtyTable = document.getElementById("dirty-table");
+
+      // Copy headers and add a new checkbox column
+      const headerRow = head.rows[0];
+      const newHeaderRow = dirtyTable.querySelector("thead").insertRow();
+      for (let cell of headerRow.cells) {
+        const th = document.createElement("th");
+        th.textContent = cell.textContent;
+        newHeaderRow.appendChild(th);
+      }
+      const selectTh = document.createElement("th");
+      selectTh.textContent = "✔";
+      newHeaderRow.appendChild(selectTh);
+
+      // Populate rows with editable inputs
+      for (let row of body.rows) {
+        const newRow = dirtyTable.querySelector("tbody").insertRow();
+        for (let cell of row.cells) {
+          const td = document.createElement("td");
+          const input = document.createElement("input");
+          input.value = cell.textContent;
+          td.appendChild(input);
+          newRow.appendChild(td);
+        }
+        const checkboxTd = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkboxTd.appendChild(checkbox);
+        newRow.appendChild(checkboxTd);
+      }
+    };
+
+    function moveSelectedRowsToCleanTable() {
+      const dirtyTable = document.getElementById("dirty-table");
+      const cleanTable = document.getElementById("clean-table").querySelector("table").querySelector("tbody");
+
+      Array.from(dirtyTable.querySelectorAll("tbody tr")).forEach(row => {
+        const checkbox = row.querySelector("input[type='checkbox']");
+        if (checkbox && checkbox.checked) {
+          const newRow = cleanTable.insertRow();
+          for (let i = 0; i < row.cells.length - 1; i++) {
+            const td = document.createElement("td");
+            td.textContent = row.cells[i].querySelector("input").value;
+            newRow.appendChild(td);
+          }
+          row.remove();
+        }
+      });
     }
   </script>
 </body>
