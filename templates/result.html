@@ -1,64 +1,49 @@
-<!-- templates/result.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Preview & Status</title>
+  <title>Sales File Result</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       padding: 2rem;
     }
-    #status {
-      margin: 1rem 0;
-      font-weight: bold;
+    h2 {
+      margin-top: 2rem;
+    }
+    .btn-download {
+      margin-top: 1rem;
     }
   </style>
 </head>
 <body>
-  <h2>📊 Sales File Preview</h2>
-  <div id="status">Checking login status...</div>
-  <div id="table-container">
-    {{ table_html | safe }}
+  <h1 class="mb-4">📊 Sales File Analysis</h1>
+
+  <div>
+    <h2>✅ Clean Sales Data</h2>
+    <div id="clean-table">{{ table_html_clean | safe }}</div>
+    <button class="btn btn-success btn-download" onclick="downloadTableAsExcel('clean-table', 'clean_sales.xlsx')">
+      ⬇️ Download Clean File
+    </button>
   </div>
 
+  {% if table_html_dirty %}
+  <div>
+    <h2 class="text-danger">⚠️ Dirty Sales Data</h2>
+    <div id="dirty-table">{{ table_html_dirty | safe }}</div>
+    <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales.xlsx')">
+      ⬇️ Download Dirty File
+    </button>
+  </div>
+  {% endif %}
 
   <script>
-    const userId = "{{ user_id }}";
-    const backendUrl = "{{ NGROK_BACKEND_URL }}";
-
-    console.log("👀 Polling for userId =", userId);
-    console.log("🔗 Backend URL =", backendUrl);
-
-    async function pollStatus() {
-        try {
-        console.log("🔗 Polling from: ", `${backendUrl}/status/${userId}`);
-        const res = await fetch(`${backendUrl}/status/${userId}`);
-        const text = await res.text();
-        console.log("🔍 Raw response:", text);
-
-        const data = JSON.parse(text); // This line causes your error
-        console.log("📡 Status response:", data);
-
-        if (data.status === 'login_failed') {
-            document.getElementById("status").innerText = "❌ Login failed. Please try again.";
-            setTimeout(() => window.location.href = "/", 3000);
-        } else if (data.status === 'scraping_done') {
-            document.getElementById("status").innerText = "✅ Login successful! Scraping done.";
-            setTimeout(() => {
-            window.location.href = `/review?user_id=${userId}`;
-            }, 2000);
-        } else {
-            setTimeout(pollStatus, 3000);
-        }
-        } catch (err) {
-        console.error("❌ Polling error:", err);
-        setTimeout(pollStatus, 5000);
-        }
+    function downloadTableAsExcel(tableId, filename) {
+      const table = document.getElementById(tableId);
+      const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+      XLSX.writeFile(workbook, filename);
     }
-
-    pollStatus();
-</script>
-
+  </script>
 </body>
 </html>

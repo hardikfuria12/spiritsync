@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import requests
 import os
 
@@ -19,7 +19,7 @@ def submit():
     password = request.form.get('password')
 
     if not file:
-        print("🚫 No file received")
+        print("🚫 No file received in request.files")
         return "No file received", 400
 
     print(f"📦 Received file: {file.filename}, type: {file.content_type}")
@@ -29,9 +29,13 @@ def submit():
     }
 
     try:
+        forward_url = f"{NGROK_BACKEND_URL}/receive_login"
         response = requests.post(
-            f"{NGROK_BACKEND_URL}/receive_login",
-            data={'username': username, 'password': password},
+            forward_url,
+            data={
+                'username': username,
+                'password': password
+            },
             files=files
         )
 
@@ -39,19 +43,24 @@ def submit():
             return f"Backend error: {response.text}", 500
 
         data = response.json()
-
         return render_template(
             "result.html",
             user_id=data['user_id'],
             table_html=data['table_html'],
             sales_clean_html=data['sales_clean_html'],
-            sales_dirty_html=data.get('sales_dirty_html'),  # Might be None
+            sales_clean_html=data['sales_clean_html'],
+            NGROK_BACKEND_URL=NGROK_BACKEND_URL
         )
 
-    except requests.exceptions.RequestException as e:
-        print("❌ Backend unreachable:", e)
-        return f"Backend unreachable: {e}", 500
 
+    except requests.exceptions.RequestException as e:
+        print("❌ Failed to reach backend:", e)
+        return f"Failed to reach backend: {e}", 500
+
+@app.route('/review')
+def review():
+    user_id = request.args.get('user_id', 'unknown')
+    return f"✅ Review page placeholder for user: {user_id}"
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
