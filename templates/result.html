@@ -22,16 +22,16 @@
 
   <div>
     <h2>✅ Clean Sales Data</h2>
-    <div id="clean-table">{{ table_html_clean | safe }}</div>
+    <div id="clean-table">{{ sales_clean_html | safe }}</div>
     <button class="btn btn-success btn-download" onclick="downloadTableAsExcel('clean-table', 'clean_sales.xlsx')">
       ⬇️ Download Clean File
     </button>
   </div>
 
-  {% if table_html_dirty %}
+  {% if sales_dirty_html %}
   <div>
     <h2 class="text-danger">⚠️ Dirty Sales Data</h2>
-    <div id="dirty-table">{{ table_html_dirty | safe }}</div>
+    <div id="dirty-table">{{ sales_dirty_html | safe }}</div>
     <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales.xlsx')">
       ⬇️ Download Dirty File
     </button>
