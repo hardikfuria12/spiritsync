@@ -74,7 +74,14 @@
         }
       }
       const filename = `${baseName}_${dateText}.xlsx`;
-      const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+
+      // Clone the table and strip the last column (header and all)
+      const clone = table.cloneNode(true);
+      Array.from(clone.rows).forEach(row => {
+        row.deleteCell(-1); // Always delete last cell, whether it's <td> or <th>
+      });
+
+      const workbook = XLSX.utils.table_to_book(clone, { sheet: "Sheet1" });
       XLSX.writeFile(workbook, filename);
     }
 
