@@ -37,7 +37,7 @@
   <div>
     <h2>✅ Clean Sales Data</h2>
     <div id="clean-table">{{ sales_clean_html | safe }}</div>
-    <button class="btn btn-success btn-download" onclick="downloadTableAsExcel('clean-table', 'clean_sales')">
+    <button class="btn btn-success btn-download" onclick="downloadCleanTable()">
       ⬇️ Download Clean File
     </button>
   </div>
@@ -51,7 +51,7 @@
         <tbody></tbody>
       </table>
     </div>
-    <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales')">
+    <button class="btn btn-danger btn-download" onclick="downloadDirtyTable()">
       ⬇️ Download Dirty File
     </button>
     <button class="btn btn-warning btn-download" onclick="moveSelectedRowsToCleanTable()">
@@ -61,29 +61,23 @@
   {% endif %}
 
   <script>
-    function downloadTableAsExcel(tableId, baseName) {
-      const originalTable = document.getElementById(tableId);
-      if (!originalTable) return;
+    function downloadCleanTable() {
+      const table = document.getElementById("clean-table").querySelector("table");
+      if (!table) return;
 
-      // Clone the table to avoid modifying the DOM
-      const clone = originalTable.cloneNode(true);
+      // Clone table to avoid DOM mutation
+      const clone = table.cloneNode(true);
 
-      // Convert all <input> fields to plain text content
-      clone.querySelectorAll("input").forEach(input => {
-        const td = input.parentElement;
-        td.textContent = input.type === "checkbox" ? (input.checked ? "✔" : "") : input.value;
-      });
+      // Remove last column from header and body
+      const headerRow = clone.querySelector("thead tr");
+      if (headerRow) headerRow.deleteCell(headerRow.cells.length - 1);
+      clone.querySelectorAll("tbody tr").forEach(row => row.deleteCell(row.cells.length - 1));
 
-      // Remove the last column from all rows (including header)
-      for (let row of clone.rows) {
-        row.deleteCell(row.cells.length - 1);
-      }
-
-      // Extract SALE_DATE from the first row, first cell
+      // Extract date from first row
       let dateText = "unknown-date";
       const firstRow = clone.querySelector("tbody tr");
       if (firstRow) {
-        const rawDate = firstRow.cells[0].textContent.trim(); // assuming SALE_DATE is first column
+        const rawDate = firstRow.cells[0].textContent.trim();
         const parts = rawDate.split("/");
         if (parts.length === 3) {
           const [mm, dd, yyyy] = parts;
@@ -91,12 +85,44 @@
         }
       }
 
-      const filename = `${baseName}_${dateText}.xlsx`;
-
-      // Convert table to workbook and save
+      const filename = `clean_sales_${dateText}.xlsx`;
       const workbook = XLSX.utils.table_to_book(clone, { sheet: "Sheet1" });
       XLSX.writeFile(workbook, filename);
     }
+
+  function downloadDirtyTable() {
+    const originalTable = document.getElementById("dirty-table");
+    if (!originalTable) return;
+
+    const clone = originalTable.cloneNode(true);
+
+    // Convert inputs to plain values
+    clone.querySelectorAll("input").forEach(input => {
+      const td = input.parentElement;
+      td.textContent = input.type === "checkbox" ? (input.checked ? "✔" : "") : input.value;
+    });
+
+    // Remove last column
+    for (let row of clone.querySelectorAll("tr")) {
+      row.deleteCell(row.cells.length - 1);
+    }
+
+    // Extract date
+    let dateText = "unknown-date";
+    const firstRow = clone.querySelector("tbody tr");
+    if (firstRow) {
+      const rawDate = firstRow.cells[0].textContent.trim();
+      const parts = rawDate.split("/");
+      if (parts.length === 3) {
+        const [mm, dd, yyyy] = parts;
+        dateText = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+      }
+    }
+
+    const filename = `dirty_sales_${dateText}.xlsx`;
+    const workbook = XLSX.utils.table_to_book(clone, { sheet: "Sheet1" });
+    XLSX.writeFile(workbook, filename);
+  }
 
     window.onload = function () {
       // Build editable dirty table
