@@ -24,6 +24,11 @@
       outline: none;
       background-color: #f0f8ff;
     }
+    .remove-row-btn {
+      cursor: pointer;
+      color: red;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -32,7 +37,7 @@
   <div>
     <h2>✅ Clean Sales Data</h2>
     <div id="clean-table">{{ sales_clean_html | safe }}</div>
-    <button class="btn btn-success btn-download" onclick="downloadTableAsExcel('clean-table', 'clean_sales.xlsx')">
+    <button class="btn btn-success btn-download" onclick="downloadTableAsExcel('clean-table', 'clean_sales')">
       ⬇️ Download Clean File
     </button>
   </div>
@@ -46,7 +51,7 @@
         <tbody></tbody>
       </table>
     </div>
-    <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales.xlsx')">
+    <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales')">
       ⬇️ Download Dirty File
     </button>
     <button class="btn btn-warning btn-download" onclick="moveSelectedRowsToCleanTable()">
@@ -56,67 +61,159 @@
   {% endif %}
 
   <script>
-    function downloadTableAsExcel(tableId, filename) {
+    function downloadTableAsExcel(tableId, baseName) {
       const table = document.getElementById(tableId);
+      const firstRow = table.querySelector("tbody tr");
+      let dateText = "unknown-date";
+      if (firstRow) {
+        const saleDate = firstRow.cells[0].textContent.trim(); // SALE_DATE assumed at index 0
+        const parts = saleDate.split("/");
+        if (parts.length === 3) {
+          const [mm, dd, yyyy] = parts;
+          dateText = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+        }
+      }
+      const filename = `${baseName}_${dateText}.xlsx`;
       const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
       XLSX.writeFile(workbook, filename);
     }
 
-    // Turn dirty HTML into editable table with checkboxes
     window.onload = function () {
+      // Build editable dirty table
       const dirtyWrapper = document.getElementById("dirty-table-wrapper");
-      if (!dirtyWrapper) return;
-      const parser = new DOMParser();
-      const tempDoc = parser.parseFromString(`{{ sales_dirty_html | safe }}`, 'text/html');
-      const table = tempDoc.querySelector("table");
+      if (dirtyWrapper) {
+        const parser = new DOMParser();
+        const tempDoc = parser.parseFromString(`{{ sales_dirty_html | safe }}`, 'text/html');
+        const table = tempDoc.querySelector("table");
+        if (table) {
+          const head = table.querySelector("thead");
+          const body = table.querySelector("tbody");
+          const dirtyTable = document.getElementById("dirty-table");
 
-      const head = table.querySelector("thead");
-      const body = table.querySelector("tbody");
-      const dirtyTable = document.getElementById("dirty-table");
+          const newHeaderRow = dirtyTable.querySelector("thead").insertRow();
+          for (let cell of head.rows[0].cells) {
+            const th = document.createElement("th");
+            th.textContent = cell.textContent;
+            newHeaderRow.appendChild(th);
+          }
+          const selectTh = document.createElement("th");
+          selectTh.textContent = "✔";
+          newHeaderRow.appendChild(selectTh);
 
-      // Copy headers and add a new checkbox column
-      const headerRow = head.rows[0];
-      const newHeaderRow = dirtyTable.querySelector("thead").insertRow();
-      for (let cell of headerRow.cells) {
-        const th = document.createElement("th");
-        th.textContent = cell.textContent;
-        newHeaderRow.appendChild(th);
-      }
-      const selectTh = document.createElement("th");
-      selectTh.textContent = "✔";
-      newHeaderRow.appendChild(selectTh);
-
-      // Populate rows with editable inputs
-      for (let row of body.rows) {
-        const newRow = dirtyTable.querySelector("tbody").insertRow();
-        for (let cell of row.cells) {
-          const td = document.createElement("td");
-          const input = document.createElement("input");
-          input.value = cell.textContent;
-          td.appendChild(input);
-          newRow.appendChild(td);
+          for (let row of body.rows) {
+            const newRow = dirtyTable.querySelector("tbody").insertRow();
+            for (let cell of row.cells) {
+              const td = document.createElement("td");
+              const input = document.createElement("input");
+              input.value = cell.textContent;
+              td.appendChild(input);
+              newRow.appendChild(td);
+            }
+            const checkboxTd = document.createElement("td");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkboxTd.appendChild(checkbox);
+            newRow.appendChild(checkboxTd);
+          }
         }
-        const checkboxTd = document.createElement("td");
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkboxTd.appendChild(checkbox);
-        newRow.appendChild(checkboxTd);
+      }
+
+      // Add ❌ button to clean table rows
+      const cleanTable = document.getElementById("clean-table").querySelector("table");
+      if (cleanTable) {
+        const header = cleanTable.querySelector("thead tr");
+        const th = document.createElement("th");
+        th.textContent = "❌";
+        header.appendChild(th);
+
+        Array.from(cleanTable.querySelectorAll("tbody tr")).forEach(row => {
+          const td = document.createElement("td");
+          const btn = document.createElement("span");
+          btn.className = "remove-row-btn";
+          btn.textContent = "❌";
+          btn.onclick = () => moveRowToDirtyTable(row);
+          td.appendChild(btn);
+          row.appendChild(td);
+        });
       }
     };
 
+    function moveRowToDirtyTable(row) {
+      const dirtyTableWrapper = document.getElementById("dirty-table-wrapper");
+      let dirtyTable = document.getElementById("dirty-table");
+
+      // If dirty table doesn't exist, create it
+      if (!dirtyTableWrapper) {
+        const section = document.createElement("div");
+        section.innerHTML = `
+          <h2 class="text-danger">⚠️ Dirty Sales Data</h2>
+          <div id="dirty-table-wrapper">
+            <table id="dirty-table" class="table table-bordered table-danger">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+            <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales')">⬇️ Download Dirty File</button>
+            <button class="btn btn-warning btn-download" onclick="moveSelectedRowsToCleanTable()">✨ Make Changes</button>
+          </div>`;
+        document.body.appendChild(section);
+        dirtyTable = document.getElementById("dirty-table");
+
+        // Copy header from clean table
+        const cleanHeaders = row.parentElement.parentElement.querySelector("thead tr").cloneNode(true);
+        const dirtyHeader = dirtyTable.querySelector("thead tr");
+        for (let i = 0; i < cleanHeaders.cells.length - 1; i++) {
+          const th = document.createElement("th");
+          th.textContent = cleanHeaders.cells[i].textContent;
+          dirtyHeader.appendChild(th);
+        }
+        const checkTh = document.createElement("th");
+        checkTh.textContent = "✔";
+        dirtyHeader.appendChild(checkTh);
+      }
+
+      // Copy row to dirty
+      const dirtyBody = dirtyTable.querySelector("tbody");
+      const newRow = dirtyBody.insertRow();
+      for (let i = 0; i < row.cells.length - 1; i++) {
+        const td = document.createElement("td");
+        const input = document.createElement("input");
+        input.value = row.cells[i].textContent.trim();
+        td.appendChild(input);
+        newRow.appendChild(td);
+      }
+      const checkboxTd = document.createElement("td");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkboxTd.appendChild(checkbox);
+      newRow.appendChild(checkboxTd);
+
+      // Remove from clean
+      row.remove();
+    }
+
     function moveSelectedRowsToCleanTable() {
       const dirtyTable = document.getElementById("dirty-table");
-      const cleanTable = document.getElementById("clean-table").querySelector("table").querySelector("tbody");
+      const cleanTableBody = document.getElementById("clean-table").querySelector("table tbody");
 
       Array.from(dirtyTable.querySelectorAll("tbody tr")).forEach(row => {
         const checkbox = row.querySelector("input[type='checkbox']");
         if (checkbox && checkbox.checked) {
-          const newRow = cleanTable.insertRow();
+          const newRow = cleanTableBody.insertRow();
           for (let i = 0; i < row.cells.length - 1; i++) {
             const td = document.createElement("td");
             td.textContent = row.cells[i].querySelector("input").value;
             newRow.appendChild(td);
           }
+
+          // Add ❌ button back
+          const td = document.createElement("td");
+          const btn = document.createElement("span");
+          btn.className = "remove-row-btn";
+          btn.textContent = "❌";
+          btn.onclick = () => moveRowToDirtyTable(newRow);
+          td.appendChild(btn);
+          newRow.appendChild(td);
+
           row.remove();
         }
       });
