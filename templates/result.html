@@ -62,26 +62,29 @@
 
   <script>
     function downloadTableAsExcel(tableId, baseName) {
-      const table = document.getElementById(tableId);
-      if (!table) return;
+      const originalTable = document.getElementById(tableId);
+      if (!originalTable) return;
 
-      // Clone the table so we don't modify the UI
-      const clone = table.cloneNode(true);
+      // Clone the table to avoid modifying the DOM
+      const clone = originalTable.cloneNode(true);
 
-      // Remove the last column from every row (header + body)
-      const rows = clone.querySelectorAll("tr");
-      rows.forEach(row => {
-        if (row.cells.length > 0) {
-          row.deleteCell(row.cells.length - 1);
-        }
+      // Convert all <input> fields to plain text content
+      clone.querySelectorAll("input").forEach(input => {
+        const td = input.parentElement;
+        td.textContent = input.type === "checkbox" ? (input.checked ? "✔" : "") : input.value;
       });
 
-      // Try to extract the date from the first data row
-      const firstRow = clone.querySelector("tbody tr");
+      // Remove the last column from all rows (including header)
+      for (let row of clone.rows) {
+        row.deleteCell(row.cells.length - 1);
+      }
+
+      // Extract SALE_DATE from the first row, first cell
       let dateText = "unknown-date";
+      const firstRow = clone.querySelector("tbody tr");
       if (firstRow) {
-        const saleDate = firstRow.cells[0]?.textContent.trim(); // assuming SALE_DATE is at index 0
-        const parts = saleDate.split("/");
+        const rawDate = firstRow.cells[0].textContent.trim(); // assuming SALE_DATE is first column
+        const parts = rawDate.split("/");
         if (parts.length === 3) {
           const [mm, dd, yyyy] = parts;
           dateText = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
@@ -90,7 +93,7 @@
 
       const filename = `${baseName}_${dateText}.xlsx`;
 
-      // Convert to Excel and download
+      // Convert table to workbook and save
       const workbook = XLSX.utils.table_to_book(clone, { sheet: "Sheet1" });
       XLSX.writeFile(workbook, filename);
     }
