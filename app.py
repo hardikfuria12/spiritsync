@@ -40,13 +40,26 @@ def submit():
 
         data = response.json()
 
-        return render_template(
-            "result.html",
-            user_id=data['user_id'],
-            table_html=data['table_html'],
-            sales_clean_html=data['sales_clean_html'],
-            sales_dirty_html=data.get('sales_dirty_html'),  # Might be None
-        )
+        if data['type'] == "onboard":
+            return render_template(
+                "create_family.html",
+                user_id=data['user_id'],
+                session=data['session'],
+                families=data['families'],
+                pending_code_table=data['pending_code_table'],
+            )
+
+        elif data['type'] == "regular":
+            return render_template(
+                "result.html",
+                user_id=data['user_id'],
+                table_html=data['table_html'],
+                sales_clean_html=data['sales_clean_html'],
+                sales_dirty_html=data.get('sales_dirty_html'),
+            )
+
+        else:
+            return f"Unknown response type: {data['type']}", 500
 
     except requests.exceptions.RequestException as e:
         print("❌ Backend unreachable:", e)
