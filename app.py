@@ -65,6 +65,22 @@ def submit():
         print("❌ Backend unreachable:", e)
         return f"Backend unreachable: {e}", 500
 
+@app.route('/save_family', methods=['POST'])
+def save_family():
+    try:
+        payload = request.get_json()
+        print("📤 Forwarding family data to backend:", payload)
+
+        response = requests.post(f"{NGROK_BACKEND_URL}/save_family", json=payload)
+
+        if response.status_code == 200:
+            return response.json(), 200
+        else:
+            return f"Backend error: {response.text}", 500
+    except Exception as e:
+        print("❌ Error in save_family route:", e)
+        return f"Server error: {e}", 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, host='0.0.0.0', port=port)
