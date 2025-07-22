@@ -23,6 +23,7 @@
 <body>
 
   <div class="sticky-controls">
+    <h5>👤 User ID: {{ user_id }}</h5>
     <label for="familyName">Enter Family Name:</label>
     <input type="text" id="familyName" class="form-control d-inline w-auto mx-2" placeholder="e.g. Family_A">
     <button onclick="groupSelectedNew()" class="btn btn-primary">Create Family</button>
@@ -30,106 +31,94 @@
   </div>
 
   <h4>📦 Pending Products</h4>
-  <div id="pendingTable">
-    {{ pending_code_table | safe }}
-  </div>
+  <div id="pending-table-container">{{ pending_code_table | safe }}</div>
 
-  <h4>👨‍👩‍👧 Grouped Families</h4>
+  <h4>👨‍👩‍👧‍👦 Grouped Families</h4>
   <table id="familyTable">
     <thead>
       <tr>
-        <th>Select</th><th>Family Name</th><th>Codes</th>
+        <th>Family Name</th><th>Codes</th><th>Select</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
   <script>
-    let data = [];
-
-    document.querySelectorAll("#pendingTable tbody tr").forEach(row => {
-      const cells = row.querySelectorAll("td");
-      if (cells.length >= 4) {
-        data.push({
-          brand: cells[1].textContent.trim(),
-          size: cells[2].textContent.trim(),
-          scmcode: cells[3].textContent.trim()
-        });
-      }
-    });
-
     let families = {{ families | tojson }};
-
-    const pendingBody = document.querySelector("#pendingTable tbody");
     const familyBody = document.querySelector("#familyTable tbody");
-
-    function renderPending() {
-      pendingBody.innerHTML = "";
-      data.forEach((item, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td><input type="checkbox" data-index="${index}"></td>
-          <td>${item.brand}</td>
-          <td>${item.size}</td>
-          <td>${item.scmcode}</td>
-        `;
-        pendingBody.appendChild(row);
-      });
-    }
 
     function renderFamilies() {
       familyBody.innerHTML = "";
       Object.entries(families).forEach(([family, codes]) => {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><input type="checkbox" data-family="${family}"></td>
           <td>${family}</td>
           <td>${codes.map(code => `<span class='badge bg-primary' onclick='removeFromFamily("${family}", "${code}")'>${code} ❌</span>`).join(" ")}</td>
+          <td><input type="checkbox" data-family="${family}"></td>
         `;
         familyBody.appendChild(row);
       });
-    }
-
-    function groupSelectedNew() {
-      const name = document.getElementById("familyName").value.trim();
-      if (!name) return alert("Enter a valid family name");
-      if (families[name]) return alert("Family name already exists");
-      const selected = [...document.querySelectorAll("#pendingTable input[type=checkbox]:checked")];
-      if (selected.length < 2) return alert("Select at least 2 codes");
-      families[name] = selected.map(cb => {
-        const idx = parseInt(cb.dataset.index);
-        const item = data.splice(idx, 1)[0];
-        return item.scmcode;
-      });
-      renderPending();
-      renderFamilies();
     }
 
     function addToExistingFamily() {
       const selectedFamily = document.querySelector("#familyTable input[type=checkbox]:checked");
       if (!selectedFamily) return alert("Select a family to add to");
       const familyName = selectedFamily.dataset.family;
-      const selected = [...document.querySelectorAll("#pendingTable input[type=checkbox]:checked")];
+      const selected = [...document.querySelectorAll("#pending-table-container input[type=checkbox]:checked")];
       if (selected.length === 0) return alert("Select codes to add");
 
       selected.forEach(cb => {
-        const idx = parseInt(cb.dataset.index);
-        const item = data.splice(idx, 1)[0];
-        families[familyName].push(item.scmcode);
+        const row = cb.closest("tr");
+        const cells = row.querySelectorAll("td");
+        const code = cells[cells.length - 2].innerText.trim();
+        const brand = cells[0].innerText.trim();
+        const size = cells[1].innerText.trim();
+        families[familyName].push(code);
+        row.remove();
       });
-      renderPending();
+
+      renderFamilies();
+    }
+
+    function groupSelectedNew() {
+      const name = document.getElementById("familyName").value.trim();
+      if (!name) return alert("Enter a valid family name");
+      if (families[name]) return alert("Family name already exists");
+
+      const selected = [...document.querySelectorAll("#pending-table-container input[type=checkbox]:checked")];
+      if (selected.length < 2) return alert("Select at least 2 codes");
+
+      families[name] = [];
+      selected.forEach(cb => {
+        const row = cb.closest("tr");
+        const cells = row.querySelectorAll("td");
+        const code = cells[cells.length - 2].innerText.trim();
+        const brand = cells[0].innerText.trim();
+        const size = cells[1].innerText.trim();
+        families[name].push(code);
+        row.remove();
+      });
+
       renderFamilies();
     }
 
     function removeFromFamily(family, code) {
       families[family] = families[family].filter(c => c !== code);
       if (families[family].length === 0) delete families[family];
-      data.push({ brand: family.split("-")[0], size: family.split("-")[1], scmcode: code });
-      renderPending();
+
+      const table = document.querySelector("#pending-table-container table tbody");
+      const newRow = document.createElement("tr");
+      newRow.innerHTML = `
+        <td>${family.split("-")[0]}</td>
+        <td>${family.split("-")[1]}</td>
+        <td>${code}</td>
+        <td><input type="checkbox" value="${code}"></td>
+      `;
+      table.appendChild(newRow);
+
       renderFamilies();
     }
 
-    renderPending();
     renderFamilies();
   </script>
 </body>
