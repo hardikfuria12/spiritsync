@@ -1,162 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Create Families</title>
+  <meta charset="UTF-8">
+  <title>Family Grouper</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    table, th, td {
-      border: 1px solid black;
-      border-collapse: collapse;
-      padding: 6px;
-    }
-    .container {
-      display: flex;
-      gap: 40px;
-    }
-    .family-box {
-      border: 1px solid #aaa;
-      padding: 10px;
-      margin: 5px 0;
-    }
-    .family-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .scm-list {
-      margin-top: 8px;
+    body { padding: 2rem; font-family: sans-serif; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background-color: #f4f4f4; }
+    .badge { margin: 2px; cursor: pointer; }
+    .sticky-controls {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      padding: 1rem;
+      border-bottom: 2px solid #ccc;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
-  <h2>👤 User: {{ user_id }}</h2>
-  <h3>📦 Pending Products (not assigned to any family)</h3>
 
-  <div id="pending-table-container">
-    {{ pending_code_table|safe }}
+  <div class="sticky-controls">
+    <label for="familyName">Enter Family Name:</label>
+    <input type="text" id="familyName" class="form-control d-inline w-auto mx-2" placeholder="e.g. Family_A">
+    <button onclick="groupSelectedNew()" class="btn btn-primary">Create Family</button>
+    <button onclick="addToExistingFamily()" class="btn btn-secondary">Add to Existing Family</button>
   </div>
 
-  <h3>Create New Family</h3>
-  <input type="text" id="new-family-name" placeholder="Enter new family name" />
-  <button onclick="createNewFamily()">Create Family</button>
+  <h4>📦 Pending Products</h4>
+  <div id="pendingTable">
+    {{ pending_code_table | safe }}
+  </div>
 
-  <h3>Grouped Families</h3>
-  <div id="families-container"></div>
-
-  <br><hr>
-  <button onclick="submitFamilies()">✅ Submit Grouped Families</button>
+  <h4>👨‍👩‍👧 Grouped Families</h4>
+  <table id="familyTable">
+    <thead>
+      <tr>
+        <th>Select</th><th>Family Name</th><th>Codes</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    (function () {
-      const initialFamilies = {{ families | tojson }};
-      const sessionId = "{{ session }}";
-      const userId = "{{ user_id }}";
+    let data = [];
 
-      let familiesData = { ...initialFamilies };
-
-      function renderFamilies() {
-        const container = document.getElementById("families-container");
-        container.innerHTML = "";
-        for (const [family, codes] of Object.entries(familiesData)) {
-          const box = document.createElement("div");
-          box.className = "family-box";
-          box.innerHTML = `
-            <div class="family-header">
-              <strong>${family}</strong>
-              <button onclick="removeFamily('${family}')">❌ Delete Family</button>
-            </div>
-            <div class="scm-list">
-              ${codes.map(code => `
-                <span>${code} <button onclick="removeCodeFromFamily('${family}', '${code}')">↩️</button></span>
-              `).join('<br>')}
-            </div>
-          `;
-          container.appendChild(box);
-        }
-      }
-
-      window.createNewFamily = function () {
-        const name = document.getElementById("new-family-name").value.trim();
-        if (!name) {
-          alert("Please enter a valid family name.");
-          return;
-        }
-
-        if (familiesData[name]) {
-          alert("Family name already exists.");
-          return;
-        }
-
-        const selected = [...document.querySelectorAll("input.scm-checkbox:checked")].map(cb => cb.value);
-        if (selected.length === 0) {
-          alert("Please select at least one SCM code.");
-          return;
-        }
-
-        familiesData[name] = selected;
-        removeRowsFromPending(selected);
-        renderFamilies();
-      };
-
-      function removeRowsFromPending(codes) {
-        for (const code of codes) {
-          const row = document.querySelector(`tr[data-scm="${code}"]`);
-          if (row) row.remove();
-        }
-      }
-
-      function addRowToPending(code) {
-        const table = document.querySelector("#pending-table-container table tbody");
-        const newRow = document.createElement("tr");
-        newRow.setAttribute("data-scm", code);
-        newRow.innerHTML = `
-          <td><input type="checkbox" class="scm-checkbox" value="${code}"></td>
-          <td>${code}</td>
-        `;
-        table.appendChild(newRow);
-      }
-
-      window.removeCodeFromFamily = function (family, code) {
-        familiesData[family] = familiesData[family].filter(c => c !== code);
-        if (familiesData[family].length === 0) {
-          delete familiesData[family];
-        }
-        addRowToPending(code);
-        renderFamilies();
-      };
-
-      window.removeFamily = function (family) {
-        const codes = familiesData[family];
-        delete familiesData[family];
-        codes.forEach(code => addRowToPending(code));
-        renderFamilies();
-      };
-
-      window.submitFamilies = function () {
-        fetch("/save_families", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            user_id: userId,
-            session: sessionId,
-            families: familiesData
-          })
-        })
-        .then(res => res.json())
-        .then(data => {
-          alert("✅ Families saved successfully!");
-          console.log("🔁 Response from backend:", data);
-        })
-        .catch(err => {
-          console.error("❌ Error submitting families:", err);
-          alert("Error submitting families. See console.");
+    document.querySelectorAll("#pendingTable tbody tr").forEach(row => {
+      const cells = row.querySelectorAll("td");
+      if (cells.length >= 4) {
+        data.push({
+          brand: cells[1].textContent.trim(),
+          size: cells[2].textContent.trim(),
+          scmcode: cells[3].textContent.trim()
         });
-      };
+      }
+    });
 
+    let families = {{ families | tojson }};
+
+    const pendingBody = document.querySelector("#pendingTable tbody");
+    const familyBody = document.querySelector("#familyTable tbody");
+
+    function renderPending() {
+      pendingBody.innerHTML = "";
+      data.forEach((item, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input type="checkbox" data-index="${index}"></td>
+          <td>${item.brand}</td>
+          <td>${item.size}</td>
+          <td>${item.scmcode}</td>
+        `;
+        pendingBody.appendChild(row);
+      });
+    }
+
+    function renderFamilies() {
+      familyBody.innerHTML = "";
+      Object.entries(families).forEach(([family, codes]) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input type="checkbox" data-family="${family}"></td>
+          <td>${family}</td>
+          <td>${codes.map(code => `<span class='badge bg-primary' onclick='removeFromFamily("${family}", "${code}")'>${code} ❌</span>`).join(" ")}</td>
+        `;
+        familyBody.appendChild(row);
+      });
+    }
+
+    function groupSelectedNew() {
+      const name = document.getElementById("familyName").value.trim();
+      if (!name) return alert("Enter a valid family name");
+      if (families[name]) return alert("Family name already exists");
+      const selected = [...document.querySelectorAll("#pendingTable input[type=checkbox]:checked")];
+      if (selected.length < 2) return alert("Select at least 2 codes");
+      families[name] = selected.map(cb => {
+        const idx = parseInt(cb.dataset.index);
+        const item = data.splice(idx, 1)[0];
+        return item.scmcode;
+      });
+      renderPending();
       renderFamilies();
-    })();
+    }
+
+    function addToExistingFamily() {
+      const selectedFamily = document.querySelector("#familyTable input[type=checkbox]:checked");
+      if (!selectedFamily) return alert("Select a family to add to");
+      const familyName = selectedFamily.dataset.family;
+      const selected = [...document.querySelectorAll("#pendingTable input[type=checkbox]:checked")];
+      if (selected.length === 0) return alert("Select codes to add");
+
+      selected.forEach(cb => {
+        const idx = parseInt(cb.dataset.index);
+        const item = data.splice(idx, 1)[0];
+        families[familyName].push(item.scmcode);
+      });
+      renderPending();
+      renderFamilies();
+    }
+
+    function removeFromFamily(family, code) {
+      families[family] = families[family].filter(c => c !== code);
+      if (families[family].length === 0) delete families[family];
+      data.push({ brand: family.split("-")[0], size: family.split("-")[1], scmcode: code });
+      renderPending();
+      renderFamilies();
+    }
+
+    renderPending();
+    renderFamilies();
   </script>
 </body>
 </html>
