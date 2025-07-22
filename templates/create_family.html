@@ -25,13 +25,36 @@
   <div class="sticky-controls">
     <h5>👤 User ID: {{ user_id }}</h5>
     <label for="familyName">Enter Family Name:</label>
-    <input type="text" id="familyName" class="form-control d-inline w-auto mx-2" placeholder="e.g. Family_A">
+    <input type="text" id="familyName" class="form-control d-inline w-auto mx-2" placeholder="e.g. omr-750">
     <button onclick="groupSelectedNew()" class="btn btn-primary">Create Family</button>
     <button onclick="addToExistingFamily()" class="btn btn-secondary">Add to Existing Family</button>
   </div>
 
   <h4>📦 Pending Products</h4>
-  <div id="pending-table-container">{{ pending_code_table | safe }}</div>
+  <div id="pending-table-container">
+    {{ pending_code_table | safe }}
+  </div>
+
+  <script>
+    // Add checkbox column to pending table
+    window.onload = function () {
+      const table = document.querySelector("#pending-table-container table");
+      if (!table) return;
+      const header = table.querySelector("thead tr");
+      const checkTh = document.createElement("th");
+      checkTh.textContent = "Select";
+      header.appendChild(checkTh);
+
+      table.querySelectorAll("tbody tr").forEach(row => {
+        const td = document.createElement("td");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = row.cells[row.cells.length - 1].textContent.trim();
+        td.appendChild(cb);
+        row.appendChild(td);
+      });
+    };
+  </script>
 
   <h4>👨‍👩‍👧‍👦 Grouped Families</h4>
   <table id="familyTable">
@@ -71,8 +94,6 @@
         const row = cb.closest("tr");
         const cells = row.querySelectorAll("td");
         const code = cells[cells.length - 2].innerText.trim();
-        const brand = cells[0].innerText.trim();
-        const size = cells[1].innerText.trim();
         families[familyName].push(code);
         row.remove();
       });
@@ -83,6 +104,7 @@
     function groupSelectedNew() {
       const name = document.getElementById("familyName").value.trim();
       if (!name) return alert("Enter a valid family name");
+      if (!/\-\d+$/.test(name)) return alert("Family name must end with -750, -650, etc.");
       if (families[name]) return alert("Family name already exists");
 
       const selected = [...document.querySelectorAll("#pending-table-container input[type=checkbox]:checked")];
@@ -93,8 +115,6 @@
         const row = cb.closest("tr");
         const cells = row.querySelectorAll("td");
         const code = cells[cells.length - 2].innerText.trim();
-        const brand = cells[0].innerText.trim();
-        const size = cells[1].innerText.trim();
         families[name].push(code);
         row.remove();
       });
@@ -106,11 +126,12 @@
       families[family] = families[family].filter(c => c !== code);
       if (families[family].length === 0) delete families[family];
 
+      const [brand, size] = family.split("-");
       const table = document.querySelector("#pending-table-container table tbody");
       const newRow = document.createElement("tr");
       newRow.innerHTML = `
-        <td>${family.split("-")[0]}</td>
-        <td>${family.split("-")[1]}</td>
+        <td>${brand}</td>
+        <td>${size}</td>
         <td>${code}</td>
         <td><input type="checkbox" value="${code}"></td>
       `;
