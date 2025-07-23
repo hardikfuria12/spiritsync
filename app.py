@@ -53,6 +53,9 @@ def submit():
             return render_template(
                 "result.html",
                 user_id=data['user_id'],
+                date = data['date'],
+                stats = data['stats'],
+                session=data['session'],
                 table_html=data['table_html'],
                 sales_clean_html=data['sales_clean_html'],
                 sales_dirty_html=data.get('sales_dirty_html'),
