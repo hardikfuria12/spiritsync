@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Upload Sales File</title>
+  <title>Clean Sales File</title>
+  <link rel="icon" href="{{ url_for('static', filename='assets/favicon.png') }}" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * {
@@ -16,7 +17,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: linear-gradient(to right, #f4f7f9, #e0eafc);
+      background-color: #F4E3C1; /* Warm sand */
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
@@ -24,7 +25,7 @@
       width: 90vw;
       max-width: 390px;
       height: auto;
-      background-color: #ffffff;
+      background-color: #FFFDF9; /* Soft off-white */
       border-radius: 28px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
       padding: 32px 24px;
@@ -34,10 +35,16 @@
       align-items: center;
     }
 
+    .upload-card img {
+      max-width: 140px;
+      margin-bottom: 16px;
+      border-radius: 20px; /* Add this line for rounded corners */
+    }
+
     h1 {
       font-size: 20px;
       font-weight: 600;
-      color: #333;
+      color: #1F1F1F;
       margin-bottom: 24px;
       text-align: center;
     }
@@ -54,26 +61,29 @@
     input[type="password"] {
       width: 100%;
       padding: 12px;
-      border: 2px solid #ccc;
+      border: 2px solid #C29F59;
       border-radius: 10px;
       font-size: 14px;
+      background-color: #FFFDF9;
+      color: #1F1F1F;
     }
 
     input[type="file"] {
       width: 100%;
       padding: 12px;
-      border: 2px dashed #ccc;
+      border: 2px dashed #C29F59;
       border-radius: 10px;
       font-size: 14px;
-      background-color: #fafafa;
+      background-color: #F9F4EC;
       cursor: pointer;
       text-align: center;
+      color: #1F1F1F;
     }
 
     input[type="submit"] {
       padding: 12px 24px;
-      background-color: #4a90e2;
-      color: white;
+      background-color: #C29F59;
+      color: #FFFDF9;
       border: none;
       border-radius: 8px;
       font-size: 16px;
@@ -83,7 +93,7 @@
     }
 
     input[type="submit"]:hover {
-      background-color: #357abd;
+      background-color: #a17e3d;
     }
 
     #loading {
@@ -98,14 +108,15 @@
 
     #loading p {
       margin-top: 10px;
-      color: #666;
+      color: #333;
       font-size: 14px;
     }
   </style>
 </head>
 <body>
   <div class="upload-card">
-    <h1>FLR RMS AND SALESFILE</h1>
+    <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="SpiritSync Logo">
+    <h1>Upload Sales File</h1>
     <form id="upload-form" action="/submit" method="POST" enctype="multipart/form-data">
       <input type="text" name="username" placeholder="Username" required>
       <input type="password" name="password" placeholder="Password" required>

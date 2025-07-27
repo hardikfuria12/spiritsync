@@ -3,27 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <title>Sales File Result</title>
+  <link rel="icon" href="{{ url_for('static', filename='assets/favicon.png') }}" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap & XLSX -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <style>
-    body {
-      padding: 2rem;
+    * {
+      box-sizing: border-box;
     }
+
+    body {
+      margin: 0;
+      padding: 2rem;
+      background-color: #F4E3C1; /* Warm sand */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    h1, h2 {
+      color: #1F1F1F;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 2rem;
+    }
+
     h2 {
+      font-size: 20px;
       margin-top: 2rem;
     }
+
+    .section-box {
+      background-color: #FFFDF9;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
     .btn-download {
       margin-top: 1rem;
+      background-color: #C29F59;
+      color: #FFFDF9;
+      border: none;
+      font-weight: bold;
+      border-radius: 8px;
+      padding: 10px 18px;
+      transition: background 0.3s ease;
     }
+
+    .btn-download:hover {
+      background-color: #a17e3d;
+    }
+
+    .table {
+      background-color: #FFFDF9;
+      border-radius: 12px;
+      overflow: hidden;
+      width: auto;
+    }
+
+    th, td {
+      padding: 10px 16px;
+      vertical-align: middle;
+    }
+
     td input {
       width: 100%;
       border: none;
       background-color: transparent;
     }
+
     td input:focus {
       outline: none;
-      background-color: #f0f8ff;
+      background-color: #f9f4ec;
     }
+
     .remove-row-btn {
       cursor: pointer;
       color: red;
@@ -32,38 +92,50 @@
   </style>
 </head>
 <body>
-  <h1 class="mb-4">📊 Sales File Analysis</h1>
-  <div class="mb-4">
-    <p><strong>👤 Username:</strong> {{ user_id }}</p>
-    <p><strong>📅 Date:</strong> {{ date }}</p>
-    <div class="mt-3">
-      <h5>📥 Input Sales File:</h5>
-      <ul>
-        <li>Total Rows: {{ stats.df_sales.total_rows }}</li>
-        <li>Total Quantity: {{ stats.df_sales.quantity_bottle_sum }}</li>
-      </ul>
-      <h5>✅ Clean Sales File:</h5>
-      <ul>
-        <li>Total Rows: {{ stats.df_sales_clean.total_rows }}</li>
-        <li>Total Quantity: {{ stats.df_sales_clean.quantity_bottle_sum }}</li>
-      </ul>
-      <h5>🧹 Dirty Sales File:</h5>
-      <ul>
-        <li>Total Rows: {{ stats.df_sales_dirty.total_rows }}</li>
-        <li>Total Quantity: {{ stats.df_sales_dirty.quantity_bottle_sum }}</li>
-      </ul>
-    </div>
-  </div>
-  <div>
-    <h2>✅ Clean Sales Data</h2>
-    <div id="clean-table">{{ sales_clean_html | safe }}</div>
-    <button class="btn btn-success btn-download" onclick="downloadCleanTable()">
-      ⬇️ Download Clean File
-    </button>
+
+  <!-- Summary Stats -->
+  <div class="section-box">
+    <h1>📊 Sales File Analysis</h1>
+    <p class="text-center"><strong>👤 Username:</strong> {{ user_id }}</p>
+    <p class="text-center"><strong>📅 Date:</strong> {{ date }}</p>
+
+    <table class="table table-bordered text-start mx-auto mt-4">
+      <thead class="table-light">
+        <tr><th colspan="2" class="text-center fs-5">📥 Input Sales File</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Total Rows</td><td>{{ stats.df_sales.total_rows }}</td></tr>
+        <tr><td>Total Quantity</td><td>{{ stats.df_sales.quantity_bottle_sum }}</td></tr>
+      </tbody>
+
+      <thead class="table-light">
+        <tr><th colspan="2" class="text-center fs-5">✅ Clean Sales File</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Total Rows</td><td>{{ stats.df_sales_clean.total_rows }}</td></tr>
+        <tr><td>Total Quantity</td><td>{{ stats.df_sales_clean.quantity_bottle_sum }}</td></tr>
+      </tbody>
+
+      <thead class="table-light">
+        <tr><th colspan="2" class="text-center fs-5 text-danger">🧹 Dirty Sales File</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Total Rows</td><td>{{ stats.df_sales_dirty.total_rows }}</td></tr>
+        <tr><td>Total Quantity</td><td>{{ stats.df_sales_dirty.quantity_bottle_sum }}</td></tr>
+      </tbody>
+    </table>
   </div>
 
+  <!-- Clean Sales Table -->
+  <div class="section-box">
+    <h2>✅ Clean Sales Data</h2>
+    <div id="clean-table">{{ sales_clean_html | safe }}</div>
+    <button class="btn-download" onclick="downloadCleanTable()">⬇️ Download Clean File</button>
+  </div>
+
+  <!-- Dirty Sales Table -->
   {% if sales_dirty_html %}
-  <div>
+  <div class="section-box">
     <h2 class="text-danger">⚠️ Dirty Sales Data</h2>
     <div id="dirty-table-wrapper">
       <table id="dirty-table" class="table table-bordered table-danger">
@@ -71,29 +143,22 @@
         <tbody></tbody>
       </table>
     </div>
-    <button class="btn btn-danger btn-download" onclick="downloadDirtyTable()">
-      ⬇️ Download Dirty File
-    </button>
-    <button class="btn btn-warning btn-download" onclick="moveSelectedRowsToCleanTable()">
-      ✨ Make Changes
-    </button>
+    <button class="btn-download" style="background-color:#dc3545" onclick="downloadDirtyTable()">⬇️ Download Dirty File</button>
+    <button class="btn-download" style="background-color:#ffc107; color:#1F1F1F;" onclick="moveSelectedRowsToCleanTable()">✨ Make Changes</button>
   </div>
   {% endif %}
 
+  <!-- Scripts -->
   <script>
     function downloadCleanTable() {
       const table = document.getElementById("clean-table").querySelector("table");
       if (!table) return;
 
-      // Clone table to avoid DOM mutation
       const clone = table.cloneNode(true);
-
-      // Remove last column from header and body
       const headerRow = clone.querySelector("thead tr");
       if (headerRow) headerRow.deleteCell(headerRow.cells.length - 1);
       clone.querySelectorAll("tbody tr").forEach(row => row.deleteCell(row.cells.length - 1));
 
-      // Extract date from first row
       let dateText = "unknown-date";
       const firstRow = clone.querySelector("tbody tr");
       if (firstRow) {
@@ -110,42 +175,37 @@
       XLSX.writeFile(workbook, filename);
     }
 
-  function downloadDirtyTable() {
-    const originalTable = document.getElementById("dirty-table");
-    if (!originalTable) return;
+    function downloadDirtyTable() {
+      const originalTable = document.getElementById("dirty-table");
+      if (!originalTable) return;
 
-    const clone = originalTable.cloneNode(true);
+      const clone = originalTable.cloneNode(true);
+      clone.querySelectorAll("input").forEach(input => {
+        const td = input.parentElement;
+        td.textContent = input.type === "checkbox" ? (input.checked ? "✔" : "") : input.value;
+      });
 
-    // Convert inputs to plain values
-    clone.querySelectorAll("input").forEach(input => {
-      const td = input.parentElement;
-      td.textContent = input.type === "checkbox" ? (input.checked ? "✔" : "") : input.value;
-    });
-
-    // Remove last column
-    for (let row of clone.querySelectorAll("tr")) {
-      row.deleteCell(row.cells.length - 1);
-    }
-
-    // Extract date
-    let dateText = "unknown-date";
-    const firstRow = clone.querySelector("tbody tr");
-    if (firstRow) {
-      const rawDate = firstRow.cells[0].textContent.trim();
-      const parts = rawDate.split("/");
-      if (parts.length === 3) {
-        const [mm, dd, yyyy] = parts;
-        dateText = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+      for (let row of clone.querySelectorAll("tr")) {
+        row.deleteCell(row.cells.length - 1);
       }
-    }
 
-    const filename = `dirty_sales_${dateText}.xlsx`;
-    const workbook = XLSX.utils.table_to_book(clone, { sheet: "Sheet1" });
-    XLSX.writeFile(workbook, filename);
-  }
+      let dateText = "unknown-date";
+      const firstRow = clone.querySelector("tbody tr");
+      if (firstRow) {
+        const rawDate = firstRow.cells[0].textContent.trim();
+        const parts = rawDate.split("/");
+        if (parts.length === 3) {
+          const [mm, dd, yyyy] = parts;
+          dateText = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+        }
+      }
+
+      const filename = `dirty_sales_${dateText}.xlsx`;
+      const workbook = XLSX.utils.table_to_book(clone, { sheet: "Sheet1" });
+      XLSX.writeFile(workbook, filename);
+    }
 
     window.onload = function () {
-      // Build editable dirty table
       const dirtyWrapper = document.getElementById("dirty-table-wrapper");
       if (dirtyWrapper) {
         const parser = new DOMParser();
@@ -184,7 +244,6 @@
         }
       }
 
-      // Add ❌ button to clean table rows
       const cleanTable = document.getElementById("clean-table").querySelector("table");
       if (cleanTable) {
         const header = cleanTable.querySelector("thead tr");
@@ -205,41 +264,12 @@
     };
 
     function moveRowToDirtyTable(row) {
-      const dirtyTableWrapper = document.getElementById("dirty-table-wrapper");
       let dirtyTable = document.getElementById("dirty-table");
+      const dirtyWrapper = document.getElementById("dirty-table-wrapper");
 
-      // If dirty table doesn't exist, create it
-      if (!dirtyTableWrapper) {
-        const section = document.createElement("div");
-        section.innerHTML = `
-          <h2 class="text-danger">⚠️ Dirty Sales Data</h2>
-          <div id="dirty-table-wrapper">
-            <table id="dirty-table" class="table table-bordered table-danger">
-              <thead><tr></tr></thead>
-              <tbody></tbody>
-            </table>
-            <button class="btn btn-danger btn-download" onclick="downloadTableAsExcel('dirty-table', 'dirty_sales')">⬇️ Download Dirty File</button>
-            <button class="btn btn-warning btn-download" onclick="moveSelectedRowsToCleanTable()">✨ Make Changes</button>
-          </div>`;
-        document.body.appendChild(section);
-        dirtyTable = document.getElementById("dirty-table");
+      if (!dirtyTable) return;
 
-        // Copy header from clean table
-        const cleanHeaders = row.parentElement.parentElement.querySelector("thead tr").cloneNode(true);
-        const dirtyHeader = dirtyTable.querySelector("thead tr");
-        for (let i = 0; i < cleanHeaders.cells.length - 1; i++) {
-          const th = document.createElement("th");
-          th.textContent = cleanHeaders.cells[i].textContent;
-          dirtyHeader.appendChild(th);
-        }
-        const checkTh = document.createElement("th");
-        checkTh.textContent = "✔";
-        dirtyHeader.appendChild(checkTh);
-      }
-
-      // Copy row to dirty
-      const dirtyBody = dirtyTable.querySelector("tbody");
-      const newRow = dirtyBody.insertRow();
+      const newRow = dirtyTable.querySelector("tbody").insertRow();
       for (let i = 0; i < row.cells.length - 1; i++) {
         const td = document.createElement("td");
         const input = document.createElement("input");
@@ -253,7 +283,6 @@
       checkboxTd.appendChild(checkbox);
       newRow.appendChild(checkboxTd);
 
-      // Remove from clean
       row.remove();
     }
 
@@ -271,7 +300,6 @@
             newRow.appendChild(td);
           }
 
-          // Add ❌ button back
           const td = document.createElement("td");
           const btn = document.createElement("span");
           btn.className = "remove-row-btn";
