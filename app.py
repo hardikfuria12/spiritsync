@@ -84,6 +84,24 @@ def save_family():
         print("❌ Error in save_family route:", e)
         return f"Server error: {e}", 500
 
+@app.route('/upload_excise', methods=['POST'])
+def upload_excise():
+    try:
+        payload = request.get_json()
+        print("📤 Forwarding excise upload to backend:", payload)
+
+        response = requests.post(f"{NGROK_BACKEND_URL}/upload_excise", json=payload)
+
+        if response.status_code == 200:
+            return response.json(), 200
+        else:
+            print("❌ Backend error response:", response.text)
+            return f"Backend error: {response.text}", 500
+
+    except Exception as e:
+        print("❌ Error in upload_excise route:", e)
+        return f"Server error: {e}", 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
