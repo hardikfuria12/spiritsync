@@ -9,7 +9,7 @@
   <!-- Bootstrap & XLSX -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -44,6 +44,9 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
       padding: 24px;
       margin-bottom: 24px;
+      max-width: 95%;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .btn-download {
@@ -66,6 +69,7 @@
       border-radius: 12px;
       overflow: hidden;
       width: auto;
+      margin: 0 auto;
     }
 
     th, td {
@@ -131,6 +135,25 @@
     <h2>✅ Clean Sales Data</h2>
     <div id="clean-table">{{ sales_clean_html | safe }}</div>
     <button class="btn-download" onclick="downloadCleanTable()">⬇️ Download Clean File</button>
+    <button class="btn-download" id="upload-excise-btn" onclick="triggerExciseUpload()">🚀 Upload on Excise</button>
+
+    <!-- Password Prompt Modal -->
+    <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-3">
+          <div class="modal-header">
+            <h5 class="modal-title" id="passwordModalLabel">🔐 Enter Excise Password</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <input type="password" id="excise-password" class="form-control" placeholder="Enter password">
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" onclick="confirmExciseUpload()">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Dirty Sales Table -->
@@ -310,6 +333,52 @@
 
           row.remove();
         }
+      });
+    }
+    function triggerExciseUpload() {
+      const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+      modal.show();
+    }
+
+    function confirmExciseUpload() {
+      const password = document.getElementById("excise-password").value;
+      const username = "{{ user_id }}";
+
+      const table = document.getElementById("clean-table").querySelector("table");
+      if (!table) {
+        alert("No clean table found.");
+        return;
+      }
+
+      // Clone and clean table (same logic as downloadCleanTable)
+      const clone = table.cloneNode(true);
+      const headerRow = clone.querySelector("thead tr");
+      if (headerRow) headerRow.deleteCell(headerRow.cells.length - 1);
+      clone.querySelectorAll("tbody tr").forEach(row => row.deleteCell(row.cells.length - 1));
+
+      // Convert cleaned table to HTML string
+      const wrapper = document.createElement("div");
+      wrapper.appendChild(clone);
+      const htmlTable = wrapper.innerHTML;
+
+      fetch("/upload_excise", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password,
+          clean_table_html: htmlTable
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || "Upload complete.");
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Upload failed.");
       });
     }
   </script>
