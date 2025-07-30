@@ -93,11 +93,24 @@ def upload_excise():
         response = requests.post(f"{NGROK_BACKEND_URL}/upload_excise", json=payload)
 
         if response.status_code == 200:
-            return response.json(), 200
-        else:
-            print("❌ Backend error response:", response.text)
-            return f"Backend error: {response.text}", 500
+            data = response.json()
 
+            if data.get("type") == "regular":
+                return render_template(
+                    "result.html",
+                    user_id=data['user_id'],
+                    date=data['date'],
+                    session=data['session'],
+                    stats=data['stats'],
+                    table_html=data['table_html'],
+                    sales_clean_html=data['sales_clean_html'],
+                    sales_dirty_html=data['sales_dirty_html'],
+                )
+
+            else:
+                return data  # will be {"message": "..."}
+        else:
+            return f"Backend error: {response.text}", 500
     except Exception as e:
         print("❌ Error in upload_excise route:", e)
         return f"Server error: {e}", 500

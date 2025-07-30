@@ -376,7 +376,13 @@
       })
       .then(res => res.json())
       .then(data => {
-        alert(data.message || "Upload complete.");
+        if (data.message && data.message.includes("✅ Upload successful")) {
+          alert(data.message);
+          window.location.href = "/";
+        } else {
+          // result.html will reload automatically in case of dirty rows
+          console.log("Upload returned complex result or dirty data");
+        }
       })
       .catch(err => {
         console.error(err);
