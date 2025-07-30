@@ -343,6 +343,7 @@
     function confirmExciseUpload() {
       const password = document.getElementById("excise-password").value;
       const username = "{{ user_id }}";
+      const session = "{{ session }}";
 
       const table = document.getElementById("clean-table").querySelector("table");
       if (!table) {
@@ -369,6 +370,7 @@
         body: JSON.stringify({
           username: username,
           password: password,
+          session: session,
           clean_table_html: htmlTable
         })
       })
