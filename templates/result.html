@@ -155,6 +155,10 @@
       </div>
     </div>
   </div>
+  <div id="loading-indicator" style="display: none; text-align: center; margin-top: 20px;">
+    <img src="https://i.gifer.com/ZZ5H.gif" alt="Loading..." width="50" height="50" />
+    <p>Uploading... Please wait</p>
+  </div>
 
   <!-- Dirty Sales Table -->
   {% if sales_dirty_html %}
@@ -352,7 +356,7 @@
       }
 
       // Close modal
-      const modalEl = document.getElementById('exciseModal');
+      const modalEl = document.getElementById('passwordModal');
       const modal = bootstrap.Modal.getInstance(modalEl);
       modal.hide();
 
