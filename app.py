@@ -95,7 +95,12 @@ def upload_excise():
         if response.status_code == 200:
             data = response.json()
 
-            if data.get("type") == "regular":
+            if data.get("type") == "success":
+                # Successful upload — show upload.html with alert
+                return render_template("upload.html", success=True)
+
+            else:
+                # Dirty data — return result.html again
                 return render_template(
                     "result.html",
                     user_id=data['user_id'],
@@ -106,14 +111,12 @@ def upload_excise():
                     sales_clean_html=data['sales_clean_html'],
                     sales_dirty_html=data['sales_dirty_html'],
                 )
-
-            else:
-                return data  # will be {"message": "..."}
         else:
             return f"Backend error: {response.text}", 500
     except Exception as e:
-        print("❌ Error in upload_excise route:", e)
+        print("❌ Error in /upload_excise:", e)
         return f"Server error: {e}", 500
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))

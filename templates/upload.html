@@ -134,5 +134,10 @@
       document.getElementById("loading").style.display = "block";
     });
   </script>
+  {% if success %}
+  <script>
+    alert("✅ Upload successful");
+  </script>
+{% endif %}
 </body>
 </html>

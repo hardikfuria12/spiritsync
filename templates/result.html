@@ -351,42 +351,45 @@
         return;
       }
 
-      // Clone and clean table (same logic as downloadCleanTable)
+      // Close modal
+      const modalEl = document.getElementById('exciseModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+
+      // Show loading GIF
+      document.getElementById("loading-indicator").style.display = "block";
+
+      // Clone and clean table
       const clone = table.cloneNode(true);
       const headerRow = clone.querySelector("thead tr");
       if (headerRow) headerRow.deleteCell(headerRow.cells.length - 1);
       clone.querySelectorAll("tbody tr").forEach(row => row.deleteCell(row.cells.length - 1));
 
-      // Convert cleaned table to HTML string
       const wrapper = document.createElement("div");
       wrapper.appendChild(clone);
       const htmlTable = wrapper.innerHTML;
 
+      // Send POST request
       fetch("/upload_excise", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: username,
-          password: password,
-          session: session,
+          username,
+          password,
+          session,
           clean_table_html: htmlTable
         })
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data.message && data.message.includes("✅ Upload successful")) {
-          alert(data.message);
-          window.location.href = "/";
-        } else {
-          // result.html will reload automatically in case of dirty rows
-          console.log("Upload returned complex result or dirty data");
-        }
+      .then(res => res.text())
+      .then(html => {
+        // Replace entire page with new HTML (either result.html or upload.html)
+        document.open();
+        document.write(html);
+        document.close();
       })
       .catch(err => {
-        console.error(err);
-        alert("Upload failed.");
+        console.error("❌ Upload error:", err);
+        alert("Upload failed. Please try again.");
       });
     }
   </script>
