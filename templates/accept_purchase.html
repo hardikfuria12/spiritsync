@@ -63,47 +63,61 @@
     <p><strong>Session:</strong> {{ session }}</p>
     <p><strong>File Path:</strong> {{ file_path }}</p>
 
-    <div class="table-responsive">
-      <table id="pending-table" class="table table-bordered">
-        <thead>
-          <tr>
-            {% for col in pending_purchase_table[0].keys() %}
-              <th>{{ col }}</th>
-            {% endfor %}
-            <th>Select</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in pending_purchase_table %}
-          <tr>
-            {% for col, val in row.items() %}
-              <td>{{ val }}</td>
-            {% endfor %}
-            <td><input type="checkbox" class="row-check"></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div id="pending-table-wrapper" class="table-responsive">
+      {{ pending_purchase_table | safe }}
     </div>
 
     <div class="text-center mt-3">
-      <button class="btn btn-primary" id="accept-btn">✅ Accept TP's</button>
+      <button class="btn btn-primary" onclick="confirmPurchase()">✅ Accept TP's</button>
     </div>
   </div>
 
   <script>
-    document.getElementById("accept-btn").addEventListener("click", function () {
-      const rows = document.querySelectorAll("#pending-table tbody tr");
-      let selected = [];
+    window.onload = function () {
+      const wrapper = document.getElementById("pending-table-wrapper");
+      const parser = new DOMParser();
+      const tempDoc = parser.parseFromString(wrapper.innerHTML, 'text/html');
+      const table = tempDoc.querySelector("table");
 
-      rows.forEach((row, idx) => {
+      if (table) {
+        // Add checkbox header
+        const headerRow = table.querySelector("thead tr");
+        const th = document.createElement("th");
+        th.textContent = "✔";
+        headerRow.appendChild(th);
+
+        // Add checkbox cells to each row
+        table.querySelectorAll("tbody tr").forEach(row => {
+          const td = document.createElement("td");
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.classList.add("row-check");
+          td.appendChild(checkbox);
+          row.appendChild(td);
+        });
+
+        // Replace wrapper content with modified table
+        wrapper.innerHTML = "";
+        wrapper.appendChild(table);
+      }
+    }
+
+    function confirmPurchase() {
+      const table = document.querySelector("#pending-table-wrapper table");
+      const headers = Array.from(table.querySelectorAll("thead th"))
+                          .map(th => th.textContent.trim())
+                          .filter(h => h !== "✔"); // remove checkbox col
+
+      let selected = [];
+      selected.push(headers); // first row = headers
+
+      table.querySelectorAll("tbody tr").forEach(row => {
         const checkbox = row.querySelector(".row-check");
         if (checkbox && checkbox.checked) {
-          let rowData = {};
+          let rowData = [];
           row.querySelectorAll("td").forEach((cell, i) => {
             if (i < row.cells.length - 1) { // skip checkbox column
-              const colName = document.querySelector("#pending-table thead tr").cells[i].textContent.trim();
-              rowData[colName] = cell.textContent.trim();
+              rowData.push(cell.textContent.trim());
             }
           });
           selected.push(rowData);
@@ -133,7 +147,7 @@
         console.error("Error:", err);
         alert("Failed to accept purchases.");
       });
-    });
+    }
   </script>
 </body>
 </html>
