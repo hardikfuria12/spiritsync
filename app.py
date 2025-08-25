@@ -49,7 +49,7 @@ def submit():
                 pending_code_table=data['pending_code_table'],
             )
 
-        elif data['type'] == "pending_purchase":
+        elif data['type'] == "purchase_pending":
             return render_template(
                 "accept_purchase.html",
                 user_id=data['user_id'],
