@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import requests
 import os
 
@@ -47,6 +47,17 @@ def submit():
                 session=data['session'],
                 families=data['families'],
                 pending_code_table=data['pending_code_table'],
+            )
+
+        elif data['type'] == "pending_purchase":
+            return render_template(
+                "accept_purchase.html",
+                user_id=data['user_id'],
+                # date = data['date'],
+                # stats = data['stats'],
+                session=data['session'],
+                file_path=data['file_path'],
+                pending_purchase_table=data['pending_purchase_data'],
             )
 
         elif data['type'] == "regular":
@@ -117,7 +128,16 @@ def upload_excise():
         print("❌ Error in /upload_excise:", e)
         return f"Server error: {e}", 500
 
+@app.route("/accept_purchase", methods=["POST"])
+def accept_purchase():
+    data = request.get_json()
 
+    # forward to backend
+    try:
+        resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data)
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
