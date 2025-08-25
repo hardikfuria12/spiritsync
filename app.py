@@ -49,6 +49,17 @@ def submit():
                 pending_code_table=data['pending_code_table'],
             )
 
+        elif data['type'] == "pending_purchase":
+            return render_template(
+                "accept_purchase.html",
+                user_id=data['user_id'],
+                # date = data['date'],
+                # stats = data['stats'],
+                session=data['session'],
+                file_path=data['file_path'],
+                pending_purchase_table=data['pending_purchase_data'],
+            )
+
         elif data['type'] == "regular":
             return render_template(
                 "result.html",
