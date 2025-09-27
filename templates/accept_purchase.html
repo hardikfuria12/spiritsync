@@ -61,15 +61,36 @@
 
     <p><strong>Username:</strong> {{ user_id }}</p>
     <p><strong>Session:</strong> {{ session }}</p>
-    <p><strong>File Path:</strong> {{ file_path }}</p>
+    <!-- <p><strong>File Path:</strong> {{ file_path }}</p> -->
 
     <div id="pending-table-wrapper" class="table-responsive">
       {{ pending_purchase_table | safe }}
     </div>
 
     <div class="text-center mt-3">
-      <button class="btn btn-primary" onclick="confirmPurchase()">✅ Accept TP's</button>
+      <button class="btn btn-primary" onclick="triggerPurchase()">✅ Accept TP's</button>
     </div>
+    <!-- Password Prompt Modal -->
+    <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-3">
+          <div class="modal-header">
+            <h5 class="modal-title" id="passwordModalLabel">🔐 Enter Excise Password</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <input type="password" id="excise-password" class="form-control" placeholder="Enter password">
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" onclick="confirmPurchase()">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="loading-indicator" style="display: none; text-align: center; margin-top: 20px;">
+    <img src="https://i.gifer.com/ZZ5H.gif" alt="Loading..." width="50" height="50" />
+    <p>Uploading... Please wait</p>
   </div>
 
   <script>
@@ -101,8 +122,12 @@
         wrapper.appendChild(table);
       }
     }
-
+    function triggerPurchase() {
+      const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+      modal.show();
+    }
     function confirmPurchase() {
+      const password = document.getElementById("excise-password").value;
       const table = document.querySelector("#pending-table-wrapper table");
       const headers = Array.from(table.querySelectorAll("thead th"))
                           .map(th => th.textContent.trim())
@@ -124,14 +149,28 @@
         }
       });
 
+      if (selected.length <= 1) {
+        alert("Please select at least one row.");
+        return;
+      }
+
+      // Close modal
+      const modalEl = document.getElementById('passwordModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+
+      // Show loading GIF
+      document.getElementById("loading-indicator").style.display = "block";
+
       const payload = {
         username: "{{ user_id }}",
         session: "{{ session }}",
         file_path: "{{ file_path }}",
+        password: password,
         selected_rows: selected
       };
 
-      console.log("Payload:", payload);
+      // console.log("Payload:", payload);
 
       fetch("/accept_purchase", {
         method: "POST",
