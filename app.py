@@ -135,7 +135,23 @@ def accept_purchase():
     # forward to backend
     try:
         resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data)
-        return jsonify(resp.json()), resp.status_code
+        response_data = resp.json()
+        success = response_data.get("success", False)
+        res_type = response_data.get("type", "unknown")
+        if success and res_type == "regular":
+            return render_template(
+                "result.html",
+                user_id=data['user_id'],
+                date = data['date'],
+                stats = data['stats'],
+                session=data['session'],
+                table_html=data['table_html'],
+                sales_clean_html=data['sales_clean_html'],
+                sales_dirty_html=data.get('sales_dirty_html'),
+            )
+        else:
+            error = response_data.get("error", "Unknown error")
+            return jsonify({"error": f"Failed to accept purchases. {error}", }), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 if __name__ == '__main__':

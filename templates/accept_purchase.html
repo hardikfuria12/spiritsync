@@ -148,12 +148,6 @@
           selected.push(rowData);
         }
       });
-
-      if (selected.length <= 1) {
-        alert("Please select at least one row.");
-        return;
-      }
-
       // Close modal
       const modalEl = document.getElementById('passwordModal');
       const modal = bootstrap.Modal.getInstance(modalEl);
@@ -169,18 +163,10 @@
         password: password,
         selected_rows: selected
       };
-
-      // console.log("Payload:", payload);
-
       fetch("/accept_purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert("Purchases accepted successfully!");
-        console.log(data);
       })
       .catch(err => {
         console.error("Error:", err);
