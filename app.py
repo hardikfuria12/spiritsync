@@ -145,13 +145,13 @@ def accept_purchase():
             print("✅ Purchase accepted, rendering result.html")
             return render_template(
                 "result.html",
-                user_id=data['user_id'],
-                date = data['date'],
-                stats = data['stats'],
-                session=data['session'],
-                table_html=data['table_html'],
-                sales_clean_html=data['sales_clean_html'],
-                sales_dirty_html=data.get('sales_dirty_html'),
+                user_id=response_data['user_id'],
+                date = response_data['date'],
+                stats = response_data['stats'],
+                session=response_data['session'],
+                table_html=response_data['table_html'],
+                sales_clean_html=response_data['sales_clean_html'],
+                sales_dirty_html=response_data.get('sales_dirty_html'),
             )
         else:
             error = response_data.get("error", "Unknown error")
