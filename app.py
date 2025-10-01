@@ -136,9 +136,11 @@ def accept_purchase():
     try:
         resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data)
         response_data = resp.json()
+        print(response_data)
         success = response_data.get("success", False)
         res_type = response_data.get("type", "unknown")
-        if success and res_type == "regular":
+        if success:
+            print("✅ Purchase accepted, rendering result.html")
             return render_template(
                 "result.html",
                 user_id=data['user_id'],
