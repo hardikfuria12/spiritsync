@@ -135,11 +135,13 @@ def accept_purchase():
     # forward to backend
     try:
         resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data)
-        response_data = resp.json()
-        print(response_data)
-        success = response_data.get("success", False)
-        res_type = response_data.get("type", "unknown")
-        if success:
+        if resp.status_code == 200:
+            response_data = resp.json()
+            # print(response_data)
+            success = response_data.get("success")
+            res_type = response_data.get("type")
+            print("Successfull:", success)
+            print("Type:", res_type)
             print("✅ Purchase accepted, rendering result.html")
             return render_template(
                 "result.html",
