@@ -131,33 +131,32 @@ def upload_excise():
 @app.route("/accept_purchase", methods=["POST"])
 def accept_purchase():
     data = request.get_json()
-
-    # forward to backend
     try:
-        resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data)
+        resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data, timeout=120)
+        print(f"Backend status: {resp.status_code}")
+
         if resp.status_code == 200:
             response_data = resp.json()
-            # print(response_data)
-            success = response_data.get("success")
-            res_type = response_data.get("type")
-            print("Successfull:", success)
-            print("Type:", res_type)
             print("✅ Purchase accepted, rendering result.html")
             return render_template(
                 "result.html",
-                user_id=response_data['user_id'],
-                date = response_data['date'],
-                stats = response_data['stats'],
-                session=response_data['session'],
-                table_html=response_data['table_html'],
-                sales_clean_html=response_data['sales_clean_html'],
-                sales_dirty_html=response_data.get('sales_dirty_html'),
+                user_id=response_data.get("user_id"),
+                date=response_data.get("date"),
+                stats=response_data.get("stats"),
+                session=response_data.get("session"),
+                table_html=response_data.get("table_html"),
+                sales_clean_html=response_data.get("sales_clean_html"),
+                sales_dirty_html=response_data.get("sales_dirty_html"),
             )
         else:
-            error = response_data.get("error", "Unknown error")
-            return jsonify({"error": f"Failed to accept purchases. {error}", }), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            try:
+                error = resp.json().get("error", "Unknown error")
+            except Exception:
+                error = resp.text
+            return jsonify({"error": f"Failed to accept purchases. {error}"}), 500
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Request to backend failed: {e}"}), 500
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
