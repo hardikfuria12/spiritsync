@@ -168,9 +168,16 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
+      .then(res => res.text())
+      .then(html => {
+        // Replace entire page with new HTML (like result.html flow)
+        document.open();
+        document.write(html);
+        document.close();
+      })
       .catch(err => {
-        console.error("Error:", err);
-        alert("Failed to accept purchases.");
+        console.error("❌ Error accepting purchase:", err);
+        alert("Failed to accept purchases. Please try again.");
       });
     }
   </script>
