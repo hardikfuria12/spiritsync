@@ -8,6 +8,10 @@ app = Flask(__name__)
 NGROK_BACKEND_URL = os.environ.get('NGROK_BACKEND_URL')
 print("🔧 NGROK_BACKEND_URL =", NGROK_BACKEND_URL)
 
+@app.route('/login', methods=['GET'])
+def login():
+    return render_template('login.html')
+
 @app.route('/', methods=['GET'])
 def upload_form():
     return render_template('upload.html')

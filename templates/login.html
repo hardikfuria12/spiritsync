@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <link rel="icon" href="{{ url_for('static', filename='assets/favicon.png') }}" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #F4E3C1; /* Warm sand */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .upload-card {
+      width: 90vw;
+      max-width: 390px;
+      height: auto;
+      background-color: #FFFDF9; /* Soft off-white */
+      border-radius: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .upload-card img {
+      max-width: 140px;
+      margin-bottom: 16px;
+      border-radius: 20px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1F1F1F;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #C29F59;
+      border-radius: 10px;
+      font-size: 14px;
+      background-color: #FFFDF9;
+      color: #1F1F1F;
+    }
+
+    input[type="submit"] {
+      padding: 12px 24px;
+      background-color: #C29F59;
+      color: #FFFDF9;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #a17e3d;
+    }
+
+    #loading {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    #loading img {
+      width: 40px;
+    }
+
+    #loading p {
+      margin-top: 10px;
+      color: #333;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="upload-card">
+    <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="SpiritSync Logo">
+    <h1>Login</h1>
+    <form id="login-form" action="/submit" method="POST">
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <input type="submit" value="Login">
+    </form>
+    <div id="loading">
+      <img src="https://i.gifer.com/LCPT.gif" alt="Loading..." />
+      <p>Processing... Please wait.</p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("login-form").addEventListener("submit", function () {
+      document.getElementById("loading").style.display = "block";
+    });
+  </script>
+  {% if success %}
+  <script>
+    alert("✅ Login successful");
+  </script>
+  {% endif %}
+</body>
+</html>
