@@ -90,7 +90,7 @@ def save_family():
         payload = request.get_json()
         print("📤 Forwarding family data to backend:", payload)
 
-        response = requests.post(f"{NGROK_BACKEND_URL}/save_family", json=payload,timeout=300)
+        response = requests.post(f"{NGROK_BACKEND_URL}/save_family", json=payload,timeout=900)
 
         if response.status_code == 200:
             return response.json(), 200
@@ -106,7 +106,7 @@ def upload_excise():
         payload = request.get_json()
         print("📤 Forwarding excise upload to backend:", payload)
 
-        response = requests.post(f"{NGROK_BACKEND_URL}/upload_excise", json=payload,timeout=300)
+        response = requests.post(f"{NGROK_BACKEND_URL}/upload_excise", json=payload,timeout=900)
 
         if response.status_code == 200:
             data = response.json()
@@ -137,7 +137,7 @@ def upload_excise():
 def accept_purchase():
     data = request.get_json()
     try:
-        resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data, timeout=300)
+        resp = requests.post(f"{NGROK_BACKEND_URL}/accept_purchase", json=data, timeout=900)
         print(f"Backend status: {resp.status_code}")
 
         if resp.status_code == 200:
