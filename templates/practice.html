@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpiritOS - Local Folder Explorer</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #222;
+            background: #f7f8fa;
+        }
+
+        h1 {
+            font-size: 26px;
+            margin-bottom: 24px;
+        }
+
+        .panel {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        .folder-picker {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 11px 18px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        #folderName {
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        #status {
+            margin-top: 16px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        #fileList {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0 0;
+        }
+
+        .entry {
+            display: flex;
+            align-items: baseline;
+            gap: 9px;
+            padding: 9px 5px;
+            border-bottom: 1px solid #eee;
+            overflow-wrap: anywhere;
+        }
+
+        .entry:last-child {
+            border-bottom: none;
+        }
+
+        .entry-icon {
+            flex-shrink: 0;
+        }
+
+        .entry-path {
+            color: #666;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
+        .muted {
+            color: #777;
+            font-size: 14px;
+        }
+
+        #summary {
+            font-size: 14px;
+            color: #555;
+        }
+
+        .error {
+            color: #b91c1c !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>SpiritOS - Local Folder Explorer</h1>
+
+    <div class="panel">
+        <div class="folder-picker">
+            <strong>User data folder:</strong>
+            <button id="selectFolder" type="button">
+                Select
+            </button>
+            <span id="folderName">No folder selected</span>
+        </div>
+
+        <div id="status">
+            Select a folder to view its files and subfolders.
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Folder Contents</h2>
+        <div id="summary">No folder selected.</div>
+        <ul id="fileList"></ul>
+    </div>
+
+    <script>
+        const selectButton = document.getElementById("selectFolder");
+        const folderName = document.getElementById("folderName");
+        const status = document.getElementById("status");
+        const fileList = document.getElementById("fileList");
+        const summary = document.getElementById("summary");
+
+        selectButton.addEventListener("click", async () => {
+            if (!window.showDirectoryPicker) {
+                status.textContent =
+                    "Folder selection is not supported by this browser. Try a recent version of Chrome or Edge.";
+                status.classList.add("error");
+                return;
+            }
+
+            try {
+                const directory = await window.showDirectoryPicker({
+                    mode: "read"
+                });
+
+                folderName.textContent = directory.name;
+                status.classList.remove("error");
+                status.textContent = "Reading folder contents...";
+                fileList.replaceChildren();
+                summary.textContent = "Scanning...";
+                selectButton.disabled = true;
+
+                let fileCount = 0;
+                let folderCount = 0;
+
+                async function scanFolder(handle, relativePath) {
+                    // List this folder before descending into subfolders.
+                    const entries = [];
+
+                    for await (const entry of handle.values()) {
+                        entries.push(entry);
+                    }
+
+                    // Display entries in alphabetical order.
+                    entries.sort((a, b) =>
+                        a.name.localeCompare(b.name)
+                    );
+
+                    for (const entry of entries) {
+                        const path = relativePath
+                            ? `${relativePath}/${entry.name}`
+                            : entry.name;
+
+                        const li = document.createElement("li");
+                        li.className = "entry";
+
+                        const icon = document.createElement("span");
+                        icon.className = "entry-icon";
+
+                        const name = document.createElement("span");
+                        name.textContent = entry.name;
+
+                        const pathLabel = document.createElement("span");
+                        pathLabel.className = "entry-path";
+                        pathLabel.textContent = path;
+
+                        if (entry.kind === "directory") {
+                            icon.textContent = "📁";
+                            folderCount++;
+                        } else {
+                            icon.textContent = "📄";
+                            fileCount++;
+                        }
+
+                        li.append(icon, name, pathLabel);
+                        fileList.appendChild(li);
+
+                        // Recursively include nested folder contents.
+                        if (entry.kind === "directory") {
+                            await scanFolder(entry, path);
+                        }
+                    }
+                }
+
+                await scanFolder(directory, "");
+
+                summary.textContent =
+                    `${fileCount} file(s), ${folderCount} subfolder(s)`;
+
+                status.textContent =
+                    "Folder scanned successfully. No files were uploaded.";
+
+                if (fileCount === 0 && folderCount === 0) {
+                    status.textContent = "The selected folder is empty.";
+                }
+
+            } catch (error) {
+                if (error.name === "AbortError") {
+                    status.textContent =
+                        "Folder selection cancelled.";
+                } else {
+                    console.error(error);
+                    status.textContent =
+                        "Could not read the selected folder: " +
+                        error.message;
+                    status.classList.add("error");
+                }
+            } finally {
+                selectButton.disabled = false;
+            }
+        });
+    </script>
+
+</body>
+</html>

@@ -162,6 +162,12 @@ def accept_purchase():
 
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Request to backend failed: {e}"}), 500
+
+
+@app.route('/practice', methods=['GET'])
+def practice():
+    return render_template('practice.html')
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
