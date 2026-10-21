@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Process Bill | SpiritSync</title>
+  <link rel="icon" href="{{ url_for('static', filename='assets/favicon.png') }}" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --ink: #1f2928;
+      --muted: #61706c;
+      --paper: #fffdf9;
+      --line: #d7ddd5;
+      --green: #245e4c;
+      --green-dark: #194638;
+      --canvas: #f4e3c1;
+      --pale-green: #edf4ef;
+      --red: #a3312a;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    main { width: 100%; max-width: 1600px; margin: 0 auto; }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 0 auto 22px;
+    }
+
+    .page-header img { width: 62px; height: auto; border-radius: 12px; }
+    h1 { margin: 0; font-size: 24px; font-weight: 650; }
+    h2 { margin: 0 0 18px; font-size: 19px; font-weight: 650; }
+    .bill-progress { margin: 5px 0 0; color: var(--muted); font-size: 14px; }
+
+    .section-box {
+      margin-bottom: 20px;
+      padding: 22px;
+      border: 1px solid rgba(62, 78, 67, 0.12);
+      border-radius: 10px;
+      background: var(--paper);
+      box-shadow: 0 8px 24px rgba(45, 48, 34, 0.06);
+    }
+
+    .fields-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 15px 18px;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .field label { color: #46554f; font-size: 13px; font-weight: 600; }
+
+    input, select {
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid #bfcac0;
+      border-radius: 5px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    input[readonly] { background: var(--pale-green); color: #39574c; }
+    input:focus, select:focus { outline: 2px solid rgba(36, 94, 76, .23); border-color: var(--green); }
+
+    .table-scroll {
+      width: 100%;
+      max-height: 52vh;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+
+    .product-table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 13px; }
+    .product-table th, .product-table td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; }
+    .product-table th { position: sticky; top: 0; z-index: 1; background: #e8efe9; color: #33453d; }
+    .product-table tbody tr:nth-child(even) { background: #fafbf8; }
+    .product-table tfoot { position: sticky; bottom: 0; font-weight: 700; background: #edf4ef; }
+    .product-table tfoot td { border-top: 2px solid #9eafa2; text-align: right;}
+    .product-table input, .product-table select { min-width: 92px; min-height: 34px; padding: 5px 7px; }
+    .product-table .item-name { min-width: 250px; white-space: normal; }
+    .product-table .numeric { text-align: right; }
+
+    .amount-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(160px, 1fr));
+      gap: 15px 18px;
+    }
+
+    .amount-grid .net-field input { border-color: var(--green); font-size: 18px; font-weight: 700; }
+    .processor-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .action-group { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    button, .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 9px 16px;
+      border: 0;
+      border-radius: 5px;
+      background: var(--green);
+      color: white;
+      font: inherit;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button:hover, .back-link:hover { background: var(--green-dark); }
+    button.secondary { border: 1px solid #9aa99f; background: transparent; color: var(--ink); }
+    button.secondary:hover { background: #edf1ec; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .status { min-height: 22px; margin: 10px 0 0; color: var(--muted); }
+    .error { color: var(--red); }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 900px) {
+      .fields-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 14px; }
+      .section-box { padding: 16px; }
+      .page-header img { width: 52px; }
+      h1 { font-size: 20px; }
+      .fields-grid, .amount-grid { grid-template-columns: 1fr 1fr; }
+      .processor-actions { align-items: stretch; flex-direction: column; }
+      .action-group { justify-content: space-between; }
+      .action-group button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="SpiritSync Logo">
+      <div>
+        <h1 id="page-title">Bill Processor</h1>
+        <p class="bill-progress" id="bill-progress"></p>
+      </div>
+    </header>
+
+    <div id="missing-queue" class="section-box" hidden>
+      <p class="error">No bill-processing queue was found in this tab. Return to the billing page and choose Process bills.</p>
+      <a class="back-link" href="{{ url_for('billing') }}">Back to Billing</a>
+    </div>
+
+    <div id="processor" hidden>
+      <section class="section-box" aria-labelledby="details-heading">
+        <h2 id="details-heading">1. Bill Details</h2>
+        <div class="fields-grid">
+          <div class="field"><label for="transaction-number">Transaction Number</label><input id="transaction-number" type="number" step="1"></div>
+          <div class="field"><label for="bill-date">Bill Date</label><input id="bill-date" type="date"></div>
+          <div class="field"><label for="bill-number">Bill Number</label><input id="bill-number" type="number" step="1"></div>
+          <div class="field"><label for="supplier-name">Supplier Name</label><input id="supplier-name" type="text" readonly></div>
+          <div class="field"><label for="tp-number">TP Number</label><input id="tp-number" type="text" readonly></div>
+          <div class="field"><label for="tp-date">TP Date</label><input id="tp-date" type="date" readonly></div>
+          <div class="field"><label for="due-date">Due Date</label><input id="due-date" type="date"></div>
+          <div class="field"><label for="scheme-date">Scheme Date</label><input id="scheme-date" type="date"></div>
+        </div>
+      </section>
+
+      <section class="section-box" aria-labelledby="products-heading">
+        <h2 id="products-heading">2. Products</h2>
+        <div class="table-scroll">
+          <table class="product-table" id="products-table">
+            <thead><tr>
+              <th>Code</th><th>Item Name</th><th>Pack</th><th>Case</th><th>Bottle</th>
+              <th>Free Case</th><th>Free Bottle</th><th>Total Quantity</th><th>Case Rate</th>
+              <th>MRP</th><th>Inclusive VAT</th><th>CD%</th><th>Scheme</th><th>Total Amount</th><th>Margin</th>
+            </tr></thead>
+            <tbody id="products-body"></tbody>
+            <tfoot><tr id="products-totals"></tr></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section class="section-box" aria-labelledby="adjustments-heading">
+        <h2 id="adjustments-heading">3. Amount Adjustments</h2>
+        <div class="amount-grid">
+          <div class="field"><label for="gross-amount">Gross Amount</label><input id="gross-amount" type="number" step="0.01" readonly></div>
+          <div class="field"><label for="cd-amount">CD</label><input id="cd-amount" type="number" step="0.01" value="0"></div>
+          <div class="field"><label for="other-charges">Other Charges</label><input id="other-charges" type="number" step="0.01" value="0"></div>
+          <div class="field"><label for="scheme-discount">Scheme Discount</label><input id="scheme-discount" type="number" step="0.01" value="0"></div>
+          <div class="field"><label for="trade-discount">Trade Discount</label><input id="trade-discount" type="number" step="0.01" value="0"></div>
+          <div class="field"><label for="quantity-discount">Quantity Discount</label><input id="quantity-discount" type="number" step="0.01" value="0"></div>
+          <div class="field net-field"><label for="net-amount">Net Amount</label><input id="net-amount" type="number" step="0.01" readonly></div>
+        </div>
+      </section>
+
+      <section class="section-box">
+        <div class="processor-actions">
+          <a class="back-link" href="{{ url_for('billing') }}">Back to Bills</a>
+          <div class="action-group">
+            <button class="secondary" id="previous-bill" type="button">Previous</button>
+            <button id="complete-bill" type="button">Complete Bill</button>
+          </div>
+        </div>
+        <p class="status" id="bill-status" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section id="all-complete" class="section-box" hidden>
+      <h2>All bills processed</h2>
+      <p>The bills in this browser tab have been processed.</p>
+      <a class="back-link" href="{{ url_for('billing') }}">Return to Billing</a>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const queueKey = "billingQueue";
+      const indexKey = "billingIndex";
+      const processor = document.getElementById("processor");
+      const missingQueue = document.getElementById("missing-queue");
+      const allComplete = document.getElementById("all-complete");
+      const headers = [
+        "Code", "Item Name", "Pack", "Case", "Bottle", "Free Case", "Free Bottle",
+        "Total Quantity", "Case Rate", "MRP", "Inclusive VAT", "CD%", "Scheme", "Total Amount", "Margin"
+      ];
+      const adjustmentIds = ["cd-amount", "other-charges", "scheme-discount", "trade-discount", "quantity-discount"];
+      let bills;
+      let billIndex;
+      let currentBill;
+
+      const numeric = value => {
+        const number = Number.parseFloat(value);
+        return Number.isFinite(number) ? number : 0;
+      };
+      const money = value => numeric(value).toFixed(2);
+
+      function dateValue(value) {
+        if (!value) return "";
+        const raw = String(value).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+        const match = raw.match(/^(\d{1,2})[-\s/]([A-Za-z]{3})[-\s/](\d{4})/);
+        if (match) {
+          const month = new Date(`${match[2]} 1, 2000`).getMonth();
+          if (!Number.isNaN(month)) return `${match[3]}-${String(month + 1).padStart(2, "0")}-${match[1].padStart(2, "0")}`;
+        }
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) return "";
+        return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+      }
+
+      function sourceProduct(row) {
+        return {
+          "Code": row["SCM Item Code"] || "",
+          "Item Name": row["Item Name"] || "",
+          "Pack": "",
+          "Case": row["Qty (Cases)"] || "",
+          "Bottle": row["Qty (Bottles)"] || "",
+          "Free Case": "",
+          "Free Bottle": "",
+          "Total Quantity": row["Total Bot. Qty"] || "",
+          "Case Rate": "",
+          "MRP": row["MRP"] || "",
+          "Inclusive VAT": "Y",
+          "CD%": "",
+          "Scheme": "",
+          "Margin": ""
+        };
+      }
+
+      function persistQueue() {
+        sessionStorage.setItem(queueKey, JSON.stringify(bills));
+        sessionStorage.setItem(indexKey, String(billIndex));
+      }
+
+      function initialDetails(bill) {
+        const first = bill.rows[0] || {};
+        const billDate = new Date().toISOString().slice(0, 10);
+        return {
+          transactionNumber: "",
+          billDate,
+          billNumber: bill.number || "",
+          supplierName: first["Party Name"] || "",
+          tpNumber: first["Manual TP No"] || "",
+          tpDate: dateValue(first["TP Date"]),
+          dueDate: addDays(billDate, 15),
+          schemeDate: billDate,
+          adjustments: { cd: "0", otherCharges: "0", schemeDiscount: "0", tradeDiscount: "0", quantityDiscount: "0" }
+        };
+      }
+
+      function ensureBillState(bill) {
+        if (!bill.details) bill.details = initialDetails(bill);
+        if (!bill.products) bill.products = bill.rows.map(sourceProduct);
+        bill.products.forEach(product => {
+          if (!product["Inclusive VAT"]) product["Inclusive VAT"] = "Y";
+        });
+      }
+
+      function addDays(date, days) {
+        if (!date) return "";
+        const result = new Date(`${date}T12:00:00`);
+        result.setDate(result.getDate() + days);
+        return `${result.getFullYear()}-${String(result.getMonth() + 1).padStart(2, "0")}-${String(result.getDate()).padStart(2, "0")}`;
+      }
+
+      function setInput(id, value) {
+        document.getElementById(id).value = value ?? "";
+      }
+
+      function renderBill() {
+        if (billIndex >= bills.length) {
+          processor.hidden = true;
+          allComplete.hidden = false;
+          sessionStorage.removeItem(queueKey);
+          sessionStorage.removeItem(indexKey);
+          return;
+        }
+
+        currentBill = bills[billIndex];
+        ensureBillState(currentBill);
+        const details = currentBill.details;
+        document.getElementById("page-title").textContent = `Bill ${currentBill.number}`;
+        document.getElementById("bill-progress").textContent = `Bill ${billIndex + 1} of ${bills.length}`;
+
+        setInput("transaction-number", details.transactionNumber);
+        setInput("bill-date", details.billDate);
+        setInput("bill-number", details.billNumber);
+        setInput("supplier-name", details.supplierName);
+        setInput("tp-number", details.tpNumber);
+        setInput("tp-date", details.tpDate);
+        setInput("due-date", details.dueDate);
+        setInput("scheme-date", details.schemeDate);
+        setInput("cd-amount", details.adjustments.cd);
+        setInput("other-charges", details.adjustments.otherCharges);
+        setInput("scheme-discount", details.adjustments.schemeDiscount);
+        setInput("trade-discount", details.adjustments.tradeDiscount);
+        setInput("quantity-discount", details.adjustments.quantityDiscount);
+
+        const body = document.getElementById("products-body");
+        body.replaceChildren();
+        currentBill.products.forEach((product, rowIndex) => {
+          const row = document.createElement("tr");
+          headers.forEach(header => {
+            const cell = document.createElement("td");
+            if (header === "Inclusive VAT") {
+              const select = document.createElement("select");
+              select.dataset.field = header;
+              [["Y", "Y"], ["N", "N"]].forEach(([value, label]) => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = label;
+                select.appendChild(option);
+              });
+              select.value = product[header] || "Y";
+              cell.appendChild(select);
+            } else if (["Pack", "Free Case", "Free Bottle", "Case Rate", "CD%", "Scheme", "Margin"].includes(header)) {
+              const input = document.createElement("input");
+              input.type = "number";
+              input.step = "any";
+              input.min = "0";
+              input.value = product[header] ?? "";
+              input.dataset.field = header;
+              input.setAttribute("aria-label", `${header}, product row ${rowIndex + 1}`);
+              cell.appendChild(input);
+            } else {
+              const value = header === "Total Amount"
+                ? money(numeric(product.MRP) * numeric(product["Total Quantity"]))
+                : product[header] ?? "";
+              cell.textContent = value;
+              if (["Case", "Bottle", "Total Quantity", "MRP", "Total Amount"].includes(header)) cell.className = "numeric";
+              if (header === "Item Name") cell.className = "item-name";
+            }
+            row.appendChild(cell);
+          });
+          body.appendChild(row);
+        });
+
+        document.getElementById("previous-bill").disabled = billIndex === 0;
+        document.getElementById("complete-bill").textContent = billIndex === bills.length - 1
+          ? "Complete Bill"
+          : "Complete Bill & Next";
+        document.getElementById("bill-status").textContent = "";
+        calculateTotals();
+        persistQueue();
+      }
+
+      function saveInputs() {
+        if (!currentBill) return;
+        const details = currentBill.details;
+        details.transactionNumber = document.getElementById("transaction-number").value;
+        details.billDate = document.getElementById("bill-date").value;
+        details.billNumber = document.getElementById("bill-number").value;
+        details.dueDate = document.getElementById("due-date").value;
+        details.schemeDate = document.getElementById("scheme-date").value;
+        details.adjustments = {
+          cd: document.getElementById("cd-amount").value,
+          otherCharges: document.getElementById("other-charges").value,
+          schemeDiscount: document.getElementById("scheme-discount").value,
+          tradeDiscount: document.getElementById("trade-discount").value,
+          quantityDiscount: document.getElementById("quantity-discount").value
+        };
+
+        [...document.querySelectorAll("#products-body tr")].forEach((row, rowIndex) => {
+          row.querySelectorAll("input[data-field], select[data-field]").forEach(input => {
+            currentBill.products[rowIndex][input.dataset.field] = input.value;
+          });
+        });
+        persistQueue();
+      }
+
+      function calculateTotals() {
+        const totals = { "Case": 0, "Bottle": 0, "Free Case": 0, "Free Bottle": 0, "Total Quantity": 0, "Total Amount": 0, "Margin": 0 };
+        currentBill.products.forEach(product => {
+          product["Total Amount"] = numeric(product.MRP) * numeric(product["Total Quantity"]);
+          totals.Case += numeric(product.Case);
+          totals.Bottle += numeric(product.Bottle);
+          totals["Free Case"] += numeric(product["Free Case"]);
+          totals["Free Bottle"] += numeric(product["Free Bottle"]);
+          totals["Total Quantity"] += numeric(product["Total Quantity"]);
+          totals["Total Amount"] += numeric(product.MRP) * numeric(product["Total Quantity"]);
+          totals.Margin += numeric(product.Margin);
+        });
+
+        const footer = document.getElementById("products-totals");
+        footer.replaceChildren();
+        headers.forEach(header => {
+          const cell = document.createElement("td");
+          if (header === "Code") cell.textContent = "Totals";
+          else if (Object.hasOwn(totals, header)) {
+            const quantityColumn = ["Total Quantity", "Case", "Bottle", "Free Case", "Free Bottle"].includes(header);
+            cell.textContent = quantityColumn ? String(totals[header]) : money(totals[header]);
+          }
+          footer.appendChild(cell);
+        });
+
+        const gross = totals["Total Amount"];
+        document.getElementById("gross-amount").value = money(gross);
+        const adjustments = adjustmentIds.map(id => numeric(document.getElementById(id).value));
+        const net = gross + adjustments[0] + adjustments[1] - adjustments[2] - adjustments[3] - adjustments[4];
+        document.getElementById("net-amount").value = money(net);
+        currentBill.details.grossAmount = money(gross);
+        currentBill.details.netAmount = money(net);
+      }
+
+      try {
+        bills = JSON.parse(sessionStorage.getItem(queueKey) || "[]");
+        billIndex = Number.parseInt(sessionStorage.getItem(indexKey) || "0", 10);
+      } catch (error) {
+        bills = [];
+        billIndex = 0;
+      }
+
+      if (!Array.isArray(bills) || bills.length === 0 || !Number.isInteger(billIndex) || billIndex < 0) {
+        missingQueue.hidden = false;
+        return;
+      }
+
+      processor.hidden = false;
+      renderBill();
+
+      document.getElementById("bill-date").addEventListener("change", event => {
+        const billDate = event.target.value;
+        document.getElementById("due-date").value = addDays(billDate, 15);
+        document.getElementById("scheme-date").value = billDate;
+        saveInputs();
+      });
+
+      ["transaction-number", "bill-number", "due-date", "scheme-date", ...adjustmentIds].forEach(id => {
+        document.getElementById(id).addEventListener("input", () => {
+          saveInputs();
+          calculateTotals();
+        });
+      });
+
+      document.getElementById("products-body").addEventListener("input", () => {
+        saveInputs();
+        calculateTotals();
+      });
+      document.getElementById("products-body").addEventListener("change", () => {
+        saveInputs();
+        calculateTotals();
+      });
+
+      document.getElementById("previous-bill").addEventListener("click", () => {
+        saveInputs();
+        billIndex -= 1;
+        persistQueue();
+        renderBill();
+      });
+
+      document.getElementById("complete-bill").addEventListener("click", async () => {
+        saveInputs();
+        const button = document.getElementById("complete-bill");
+        const status = document.getElementById("bill-status");
+        button.disabled = true;
+        status.classList.remove("error");
+        status.textContent = "Sending bill for processing...";
+
+        try {
+          const response = await fetch("{{ url_for('process_current_bill') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              number: currentBill.number,
+              details: currentBill.details,
+              rows: currentBill.products
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Could not process this bill.");
+
+          billIndex += 1;
+          persistQueue();
+          renderBill();
+        } catch (error) {
+          status.classList.add("error");
+          status.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

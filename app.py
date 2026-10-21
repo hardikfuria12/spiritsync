@@ -1,6 +1,13 @@
+from curses import raw
+from pydoc import html
+
 from flask import Flask, render_template, request, jsonify
+from pandas.plotting import table
 import requests
 import os
+import pandas as pd
+import io
+import re
 
 app = Flask(__name__)
 
@@ -162,6 +169,92 @@ def accept_purchase():
 
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Request to backend failed: {e}"}), 500
+
+
+@app.route('/billing', methods=['GET'])
+def billing():
+    file_path = os.path.join(app.root_path, 'TPDetails_converted.xlsx')
+
+    if not os.path.isfile(file_path):
+        return render_template(
+            'billing.html',
+            error="TPDetails_converted.xlsx was not found in the project root."
+        ), 404
+
+    try:
+        dataframe = pd.read_excel(file_path, engine='openpyxl')
+    except (OSError, ValueError, ImportError) as error:
+        return render_template(
+            'billing.html',
+            error=f"Could not read TPDetails_converted.xlsx: {error}"
+        ), 500
+
+    dataframe = dataframe.dropna(how='all').reset_index(drop=True)
+    dataframe.columns = [
+        str(column).strip() if pd.notna(column) else f"Column {index + 1}"
+        for index, column in enumerate(dataframe.columns)
+    ]
+
+    display_columns = [
+        "Received Date",
+        "Auto TP No",
+        "Manual TP No",
+        "TP Date",
+        "Party Name",
+        "SCM Item Code",
+        "Item Name",
+        "Size",
+        "Qty (Cases)",
+        "Qty (Bottles)",
+        "Total Bot. Qty",
+        "MRP",
+    ]
+
+    visible_columns = [
+        column for column in display_columns
+        if column in dataframe.columns
+    ]
+
+    display_dataframe = dataframe[visible_columns]
+
+    table_html = display_dataframe.to_html(
+        index=False,
+        classes="data-table",
+        border=0,
+        na_rep="",
+        escape=True
+    )
+
+    return render_template(
+        'billing.html',
+        filename='TPDetails_converted.xlsx',
+        row_count=len(dataframe),
+        column_count=len(display_dataframe.columns),
+        table_html=table_html
+    )
+
+@app.route('/billing/process', methods=['GET'])
+def billing_processor():
+    return render_template('bill_processor.html')
+
+@app.route('/billing/process/current', methods=['POST'])
+def process_current_bill():
+    bill = request.get_json(silent=True)
+
+    if (
+        not isinstance(bill, dict)
+        or not isinstance(bill.get('rows'), list)
+        or not bill['rows']
+        or not all(isinstance(row, dict) for row in bill['rows'])
+    ):
+        return jsonify({"error": "Invalid bill data"}), 400
+
+    return jsonify({
+        "ok": True,
+        "bill_number": bill.get("number"),
+        "message": "Bill received for processing."
+    })
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)

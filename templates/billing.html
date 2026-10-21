@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Billing | SpiritSync</title>
+  <link
+    rel="icon"
+    href="{{ url_for('static', filename='assets/favicon.png') }}"
+    type="image/png"
+  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      color: #1F1F1F;
+      background-color: #F4E3C1;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    main {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .page-header img {
+      width: 72px;
+      height: auto;
+      border-radius: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .section-box {
+      margin-bottom: 24px;
+      padding: 24px;
+      background-color: #FFFDF9;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .table-summary {
+      margin: 0 0 16px;
+      color: #555;
+    }
+
+    .error {
+      margin: 0;
+      color: #9B1C1C;
+    }
+
+    .table-scroll {
+      max-height: 75vh;
+      overflow: auto;
+      border: 1px solid #D5D0C6;
+      border-radius: 8px;
+      background: #FFFDF9;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 10px 12px;
+      border: 1px solid #D5D0C6;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .data-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      color: #1F1F1F;
+      background-color: #F9F4EC;
+      font-weight: 600;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+      background-color: #F8F5EF;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 14px;
+      }
+
+      .section-box {
+        padding: 16px;
+      }
+
+      .page-header img {
+        width: 56px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <header class="page-header">
+      <img
+        src="{{ url_for('static', filename='assets/logo.png') }}"
+        alt="SpiritSync Logo"
+      >
+      <h1>TP Billing Data</h1>
+    </header>
+
+    {% if error %}
+      <section class="section-box">
+        <p class="error">{{ error }}</p>
+      </section>
+    {% endif %}
+
+    {% if table_html %}
+    <section class="section-box">
+        <h2>{{ filename }}</h2>
+        <p class="table-summary">{{ row_count }} rows, {{ column_count }} columns</p>
+
+        <p id="selection-status" class="table-summary" aria-live="polite">
+        Select rows for this bill.
+        </p>
+        <button id="move-selected" type="button">
+        Okay
+        </button>
+
+        <div class="table-scroll" id="source-table-scroll">
+        {{ table_html | safe }}
+        </div>
+    </section>
+    <div id="bills-container"></div>
+
+    <button id="start-processing" type="button">Process bills</button>
+    <p id="process-status" aria-live="polite"></p>
+
+    <script>
+    const sourceTable = document.querySelector("#source-table-scroll table");
+    const sourceBody = sourceTable?.querySelector("tbody");
+    const sourceHeader = sourceTable?.querySelector("thead tr");
+    const status = document.getElementById("selection-status");
+    const billsContainer = document.getElementById("bills-container");
+    let billNumber = 0;
+
+    function returnRowToSource(billRow) {
+        const sourceRow = document.createElement("tr");
+
+        // Copy data cells, leaving out the bill's Actions cell.
+        [...billRow.cells].slice(0, -1).forEach((cell) => {
+        sourceRow.appendChild(cell.cloneNode(true));
+        });
+
+        const selectCell = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.setAttribute("aria-label", "Select row for a bill");
+        selectCell.appendChild(checkbox);
+        sourceRow.appendChild(selectCell);
+
+        sourceBody.appendChild(sourceRow);
+        billRow.remove();
+    }
+
+    if (sourceTable && sourceBody && sourceHeader && billsContainer) {
+        const selectHeader = document.createElement("th");
+        selectHeader.textContent = "Select";
+        sourceHeader.appendChild(selectHeader);
+
+        sourceBody.querySelectorAll("tr").forEach((row) => {
+        const selectCell = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.setAttribute("aria-label", "Select row for a bill");
+        selectCell.appendChild(checkbox);
+        row.appendChild(selectCell);
+        });
+
+        document.getElementById("move-selected").addEventListener("click", () => {
+        const selectedCheckboxes = [
+            ...sourceBody.querySelectorAll("input[type='checkbox']:checked")
+        ];
+
+        if (selectedCheckboxes.length === 0) {
+            status.textContent = "Select at least one row first.";
+            return;
+        }
+
+        billNumber += 1;
+
+        const billSection = document.createElement("section");
+        billSection.className = "section-box";
+
+        const heading = document.createElement("h2");
+        heading.textContent = `Bill ${billNumber}`;
+        billSection.appendChild(heading);
+
+        const deleteBillButton = document.createElement("button");
+        deleteBillButton.type = "button";
+        deleteBillButton.textContent = "Delete entire bill";
+        deleteBillButton.addEventListener("click", () => {
+            const billRows = [...billBody.rows];
+            billRows.forEach(returnRowToSource);
+            billSection.remove();
+            status.textContent = `Bill ${billNumber} deleted; its rows returned above.`;
+        });
+        billSection.appendChild(deleteBillButton);
+
+        const count = document.createElement("p");
+        count.className = "table-summary";
+        billSection.appendChild(count);
+
+        const scrollContainer = document.createElement("div");
+        scrollContainer.className = "table-scroll";
+
+        const billTable = document.createElement("table");
+        billTable.className = "data-table";
+
+        const billHead = document.createElement("thead");
+        const billHeaderRow = document.createElement("tr");
+
+        [...sourceHeader.cells].slice(0, -1).forEach((cell) => {
+            const headerCell = document.createElement("th");
+            headerCell.textContent = cell.textContent;
+            billHeaderRow.appendChild(headerCell);
+        });
+
+        const actionsHeader = document.createElement("th");
+        actionsHeader.textContent = "Actions";
+        billHeaderRow.appendChild(actionsHeader);
+        billHead.appendChild(billHeaderRow);
+        billTable.appendChild(billHead);
+
+        const billBody = document.createElement("tbody");
+
+        selectedCheckboxes.forEach((checkbox) => {
+            const sourceRow = checkbox.closest("tr");
+            const billRow = document.createElement("tr");
+
+            [...sourceRow.cells].slice(0, -1).forEach((cell) => {
+            billRow.appendChild(cell.cloneNode(true));
+            });
+
+            const actionsCell = document.createElement("td");
+            const returnButton = document.createElement("button");
+            returnButton.type = "button";
+            returnButton.textContent = "Delete row";
+            returnButton.addEventListener("click", () => {
+            returnRowToSource(billRow);
+            count.textContent = `${billBody.rows.length} rows`;
+            status.textContent = "Row returned to the table above.";
+            });
+            actionsCell.appendChild(returnButton);
+            billRow.appendChild(actionsCell);
+
+            billBody.appendChild(billRow);
+            sourceRow.remove();
+        });
+
+        billTable.appendChild(billBody);
+        scrollContainer.appendChild(billTable);
+        billSection.appendChild(count);
+        billSection.appendChild(scrollContainer);
+        billsContainer.appendChild(billSection);
+
+        count.textContent = `${billBody.rows.length} rows`;
+        status.textContent = `Bill ${billNumber} created.`;
+        });
+    }
+    document.getElementById("start-processing").addEventListener("click", () => {
+      const bills = [...document.querySelectorAll("#bills-container > .section-box")]
+        .map((section, index) => {
+          const table = section.querySelector("table");
+          const headers = [...table.querySelectorAll("thead th")]
+            .slice(0, -1)
+            .map(cell => cell.textContent.trim());
+
+          const rows = [...table.querySelectorAll("tbody tr")].map(row =>
+            Object.fromEntries(
+              headers.map((header, cellIndex) => [
+                header,
+                row.cells[cellIndex].textContent.trim()
+              ])
+            )
+          );
+
+          return { number: index + 1, rows };
+        })
+        .filter(bill => bill.rows.length);
+
+      if (!bills.length) {
+        document.getElementById("process-status").textContent =
+          "Create at least one bill first.";
+        return;
+      }
+
+      sessionStorage.setItem("billingQueue", JSON.stringify(bills));
+      sessionStorage.setItem("billingIndex", "0");
+      window.location.href = "/billing/process";
+    });
+    
+    </script>
+    
+    {% endif %}
+  </main>
+</body>
+</html>
